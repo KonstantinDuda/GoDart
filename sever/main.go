@@ -17,11 +17,19 @@ import (
 var db *gorm.DB
 var err error
 
+//clients := int[]{}
+
 type Player struct {
-	Id         int    `json:"id"`
-	PlayerName string `json:"playername"`
-	WinGame    int    `json:"wingame"`
-	LoseGame   int    `json:"losegame"`
+	Id             int    `json:"id"`
+	PlayerName     string `json:"name"`
+	PlayerPassword string `json:"password"`
+	WinGame        int    `json:"wingame"`
+	LoseGame       int    `json:"losegame"`
+}
+
+type MyUser struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
 }
 
 func homePage(w http.ResponseWriter, r *http.Request) {
@@ -41,20 +49,11 @@ func homePageWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*for {
-		thisType, msg, err := wsh.ReadMessage()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Println(msg)
-		fmt.Println(thisType)
-		wsh.WriteMessage(thisType, msg)
-	}*/
+	ip := wsh.LocalAddr().String()
 
 	for {
 		data := ""
-		thisType, msg, err := wsh.ReadMessage()
+		t, msg, err := wsh.ReadMessage()
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -62,14 +61,17 @@ func homePageWS(w http.ResponseWriter, r *http.Request) {
 		data = string(msg)
 		//decod := json.Unmarshal(msg, &data)
 		fmt.Println("Decode: ", data)
-		//fmt.Println(thisType)
-		wsh.WriteMessage(thisType, msg)
+		fmt.Println("Ip: ", ip)
+		fmt.Println("Type: ", t)
+		//wsh.WriteMessage(_, ip)
+		wsh.WriteMessage(websocket.TextMessage, []byte(ip))
+
 	}
 
 }
 
 func handleRequests() {
-	log.Println("Starting developer server at http://127.0.0.1:10000/")
+	log.Println("Starting developer server at http://127.0.0.1:10000/in")
 	log.Println("Quit the server with CONTROL-C.")
 
 	/*myRouter := mux.NewRouter().StrictSlash(true)
@@ -83,9 +85,42 @@ func handleRequests() {
 	//log.Fatal(
 	myRouter := mux.NewRouter()
 
+	myRouter.HandleFunc("/in", in)
 	myRouter.HandleFunc("/ws", homePageWS)
 
 	http.ListenAndServe(":10000", myRouter) //)
+}
+
+func in(w http.ResponseWriter, r *http.Request) {
+	//vars := mux.Vars(r)
+
+	/*var pl Player
+	vars, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(vars, &pl)
+	fmt.Print(pl)*/
+
+	/*data := ""
+	msg
+	data = string(msg)
+	fmt.Print(data)*/
+	fmt.Println("in")
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("body is ", body)
+	var user = MyUser{}
+	jsonErr := json.Unmarshal(body, &user)
+	if jsonErr != nil {
+		fmt.Println(jsonErr)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	fmt.Fprintf(w, "Hello, %s! Your password is %s", user.Name, user.Password)
+
+	//fmt.Fprintf(w, "Welcome to Authorisation Page!")
+	//fmt.Println("Endpoint Hit: Authorisation Page")
 }
 
 func createNewPlayer(w http.ResponseWriter, r *http.Request) {
