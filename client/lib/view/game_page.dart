@@ -1,32 +1,8 @@
-//import 'dart:convert';
-//import 'dart:io';
-
 import 'package:flutter/material.dart';
-//import 'package:web_socket_channel/web_socket_channel.dart';
-//import 'dart:convert';
-//import 'package:http/http.dart' as http;
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'dart:convert';
 
-import 'view/authorisation_page.dart';
-//import 'view/game_page.dart';
-
-Future<void> main() async {
-  //runApp(const MainApp());*/
-
-  /*var url = Uri.parse(
-      'http://localhost:10000/in'); //Uri.https('://localhost:10000', '/in');
-  var response =
-      await http.post(url, body: {'name': 'doodle', 'password': 'blue'});
-  print('Response status: ${response.statusCode}');
-  print('Response body: ${response.body}');
-
-  print(await http.read(url)); // Uri.https('example.com', 'foobar.txt')));*/
-  runApp(const AuthorisationPage());
-}
-
-
-
-
-/*class MainApp extends StatefulWidget {
+class MainApp extends StatefulWidget {
   const MainApp({super.key});
 
   @override
@@ -110,4 +86,4 @@ class _MainAppState extends State<MainApp> {
       ),
     );
   }
-}*/
+}
