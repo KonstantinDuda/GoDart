@@ -7,7 +7,15 @@ class AuthEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class AuthInEvent extends AuthEvent {}
+class AuthInEvent extends AuthEvent {
+  final String login;
+  final String password;
+
+  const AuthInEvent(this.login, this.password);
+
+  @override
+  List<Object> get props => [login, password];
+}
 
 class AuthRegistrationEvent extends AuthEvent {}
 
@@ -22,7 +30,7 @@ class AuthState extends Equatable {
   List<Object> get props => [];
 }
 
-class AuthChackState extends AuthState {}
+class AuthCheckState extends AuthState {}
 
 class AuthSuccessState extends AuthState {}
 

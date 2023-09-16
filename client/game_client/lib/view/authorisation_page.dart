@@ -17,14 +17,8 @@ class _AuthorisationPage extends State<AuthorisationPage> {
   String loginText = 'Enter your Login';
   String passwordText = 'Enter your Password';
 
-  checkPost(String login, String password) async {
-    /*Map<String, String> toJson() {
-      return {
-        'name': loginText,
-        'password': passwordText,
-      };
-    }*/
-    var data = {'name': login, 'password': password};
+  checkPost(String login, String password, BuildContext context) async {
+    /*var data = {'name': login, 'password': password};
     var myBody = json.encode(data);
     if (login != '' && password != '') {
       print('loginText == $login && passwordText == $password');
@@ -37,7 +31,8 @@ class _AuthorisationPage extends State<AuthorisationPage> {
 
       //print(await http.read(url));
       print(await http.get(url)); // Uri.https('example.com', 'foobar.txt')));
-    }
+    }*/
+
     if (login == '') {
       setState(() {
         loginText += '!';
@@ -47,6 +42,8 @@ class _AuthorisationPage extends State<AuthorisationPage> {
       setState(() {
         passwordText += '!';
       });
+    } else {
+      context.read<AuthBloc>().add(AuthInEvent(login, password));
     }
   }
 
@@ -62,16 +59,24 @@ class _AuthorisationPage extends State<AuthorisationPage> {
             Text(loginText),
             TextField(
               controller: TextEditingController(text: login),
+              onChanged: (value) {
+                login = value;
+              },
             ),
             const Text(""),
             Text(passwordText),
             TextField(
+              onChanged: (value) {
+                password = value;
+              },
               controller: TextEditingController(text: password),
             ),
             TextButton(
                 onPressed: () {
-                  print("Button is pressed");
-                  context.read<AuthBloc>().add(AuthInEvent());
+                  print(
+                      "Button is pressed. Login == $login. Password == $password");
+                  checkPost(login, password, context);
+                  //context.read<AuthBloc>().add(AuthInEvent(login, password));
                 },
                 child: const Text("Auth.")),
           ],
