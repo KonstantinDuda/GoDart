@@ -7,7 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
+
+	//"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -28,15 +29,17 @@ type Player struct {
 	LoseGame       int    `json:"losegame"`
 }
 
+var plOnline []Player
+
 type MyUser struct {
 	Name     string `json:"name"`
 	Password string `json:"password"`
 }
 
-func homePage(w http.ResponseWriter, r *http.Request) {
+/*func homePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome to HomePage!")
 	fmt.Println("Endpoint Hit: HomePage")
-}
+}*/
 
 func homePageWS(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
@@ -115,8 +118,10 @@ func in(w http.ResponseWriter, r *http.Request) {
 	}
 	uuid := fmt.Sprintf("%x-%x-%x-%x-%x",
 		userToken[0:4], userToken[4:6], userToken[6:8], userToken[8:10], userToken[10:])
+
 	fmt.Println(uuid)
 	fmt.Fprintf(w, "Hello, %s! Your password is %s. Your Token: %s", user.Name, user.Password, uuid)
+	playersOnline(user)
 }
 
 func myCreatePlayer(user MyUser) Player {
@@ -137,7 +142,14 @@ func myCreatePlayer(user MyUser) Player {
 	return newPlayer
 }
 
-func createNewPlayer(w http.ResponseWriter, r *http.Request) {
+func playersOnline(user MyUser) {
+	newPl := myCreatePlayer(user)
+
+	plOnline = append(plOnline, newPl)
+	fmt.Printf("Players.len == %d", len(plOnline))
+}
+
+/*func createNewPlayer(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 
 	var stats Player
@@ -153,7 +165,7 @@ func returnAllPlayer(w http.ResponseWriter, r *http.Request) {
 	db.Find(&stats)
 	/*if stats != nil {
 		fmt.Println("Players: ", stats[0].PlayerName)
-	}*/
+	}
 	fmt.Println("Endpoint Hit: return All stats")
 
 	json.NewEncoder(w).Encode(stats)
@@ -179,7 +191,7 @@ func returnSinglePlayer(w http.ResponseWriter, r *http.Request) {
 
 func updatePlayer(w http.ResponseWriter, r *http.Request) {}
 
-func deletePlayer(w http.ResponseWriter, r *http.Request) {}
+func deletePlayer(w http.ResponseWriter, r *http.Request) {}*/
 
 func main() {
 	db, err = gorm.Open("mysql", "user:123456@tcp(127.0.0.1:3306)/MyGame?charset=utf8&parseTime=True")
