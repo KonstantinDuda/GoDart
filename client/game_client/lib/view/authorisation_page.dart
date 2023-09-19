@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:game_client/bloc/auth_bloc.dart';
+import 'package:game_client/bloc/provider_bloc.dart';
 import 'package:game_client/events/auth_event_state.dart';
 import 'package:http/http.dart' as http;
 
@@ -44,6 +45,10 @@ class _AuthorisationPage extends State<AuthorisationPage> {
       });
     } else {
       context.read<AuthBloc>().add(AuthInEvent(login, password));
+      if (context.read<AuthBloc>().state == AuthSuccessState()) {
+        print("context.read<AuthBloc>().state == AuthSuccessState()");
+        context.read<ProviderBloc>().add(GameProviderEvent());
+      }
     }
   }
 
