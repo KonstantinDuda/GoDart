@@ -2,7 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
 class ProviderEvent extends Equatable {
-  ProviderEvent();
+  const ProviderEvent();
 
   @override
   List<Object> get props => [];
@@ -25,7 +25,7 @@ class GameProviderEvent extends ProviderEvent {}
 
 //@immutable
 class ProviderState extends Equatable {
-  ProviderState();
+  const ProviderState();
 
   @override
   List<Object> get props => [];

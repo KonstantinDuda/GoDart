@@ -30,7 +30,7 @@ class AuthState extends Equatable {
   List<Object> get props => [];
 }
 
-class AuthCheckState extends AuthState {}
+class AuthAwaitState extends AuthState {}
 
 class AuthSuccessState extends AuthState {}
 

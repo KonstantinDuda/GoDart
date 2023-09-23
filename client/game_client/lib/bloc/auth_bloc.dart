@@ -6,7 +6,7 @@ import '../events/auth_event_state.dart';
 import 'package:http/http.dart' as http;
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  AuthBloc() : super(AuthCheckState()) {
+  AuthBloc() : super(AuthAwaitState()) {
     on<AuthInEvent>(_authIn);
     on<AuthRegistrationEvent>(_registration);
     on<AuthFailEvent>(_fail);
