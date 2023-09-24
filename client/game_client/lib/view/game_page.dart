@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:game_client/bloc/game_bloc.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:convert';
+
+import '../bloc/provider_bloc.dart';
+import '../events/game_event_state.dart';
 
 class GamePage extends StatefulWidget {
   const GamePage({super.key});
@@ -22,18 +27,22 @@ class _GamePage extends State<GamePage> {
 
   var iconFinishSize = 100.0;
 
-  late final WebSocketChannel _channel;
-  final _messages = <String>[];
+  //late final WebSocketChannel _channel;
+  late BuildContext localContext;
+  //final _messages = <String>[];
   List<GestureDetector> xoWidgets = [];
 
   @override
   void initState() {
-    _createConnection();
+    //_createConnection();
     _myButtoms();
     super.initState();
   }
 
-  void _createConnection() async {
+  /*_createConnection(BuildContext context) async {
+    context.read<GameBloc>().add(GameEventConnection());
+  }*/
+  /*void _createConnection() async {
     _channel = WebSocketChannel.connect(Uri.parse('ws://localhost:10000/ws'));
 
     _channel.stream.listen(
@@ -44,7 +53,7 @@ class _GamePage extends State<GamePage> {
         onError: (error) => setState(() => _messages.add('Error: $error')));
 
     _channel.sink.add("Success connection");
-  }
+  }*/
 
   _myButtoms() {
     for (var i = 0; i < 9; i++) {
@@ -60,7 +69,8 @@ class _GamePage extends State<GamePage> {
             //var data = i.toString();
             var data = json.encode(i.toString());
             print("sink: $data");
-            _channel.sink.add(data);
+            localContext.read<GameBloc>().add(GameEventTap(data));
+            //_channel.sink.add(data);
           },
         ),
       );
@@ -69,21 +79,30 @@ class _GamePage extends State<GamePage> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        body: SizedBox(
-          width: screenSize.width,
-          height: screenSize.height,
-          child: GridView.count(
-            primary: false,
-            padding: const EdgeInsets.all(10),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            crossAxisCount: 3,
-            children: xoWidgets,
+    return BlocBuilder<GameBloc, GameState>(builder: ((context, state) {
+      localContext = context;
+      //_createConnection(context);
+      //if (context.read<GameBloc>().state == GameStateSuccess()) {
+      return MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: screenSize.width,
+            height: screenSize.height,
+            child: GridView.count(
+              primary: false,
+              padding: const EdgeInsets.all(10),
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              crossAxisCount: 3,
+              children: xoWidgets,
+            ),
           ),
         ),
-      ),
-    );
+      );
+      /*} else {
+      context.read<ProviderBloc>().add(AuthProviderEvent());
+      return const SizedBox();
+      }*/
+    }));
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:game_client/bloc/auth_bloc.dart';
+import 'package:game_client/bloc/game_bloc.dart';
 import 'package:game_client/view/game_page.dart';
 //import 'package:game_client/bloc/provider_bloc.dart';
 //import 'package:game_client/view/game_page.dart';
@@ -30,20 +31,23 @@ class App extends StatelessWidget {
       create: (_) => ProviderBloc(),
       child: BlocProvider(
         create: (_) => AuthBloc(),
-        child: BlocBuilder<ProviderBloc, ProviderState>(
-          builder: (_, state) {
-            if (state is AuthProviderState) {
-              print("state is AuthorisationPage");
-              return const AuthorisationPage();
-            }
-            if (state is GameProviderState) {
-              print("state is GameProviderState");
-              return const GamePage();
-            } else {
-              print("state isn't AuthorisationPage");
-              return const AuthorisationPage();
-            }
-          },
+        child: BlocProvider(
+          create: (_) => GameBloc(),
+          child: BlocBuilder<ProviderBloc, ProviderState>(
+            builder: (_, state) {
+              if (state is AuthProviderState) {
+                print("state is AuthorisationPage");
+                return const AuthorisationPage();
+              }
+              if (state is GameProviderState) {
+                print("state is GameProviderState");
+                return const GamePage();
+              } else {
+                print("state isn't AuthorisationPage");
+                return const AuthorisationPage();
+              }
+            },
+          ),
         ),
       ),
     );

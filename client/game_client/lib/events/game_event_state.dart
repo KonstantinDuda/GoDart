@@ -10,7 +10,7 @@ class GameEvent extends Equatable {
 class GameEventConnection extends GameEvent {}
 
 class GameEventTap extends GameEvent {
-  final int tile;
+  final String tile;
   const GameEventTap(this.tile);
 
   @override

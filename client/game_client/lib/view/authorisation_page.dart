@@ -77,11 +77,10 @@ class _AuthorisationPage extends State<AuthorisationPage> {
                   print(
                       "Button is pressed. Login == $login. Password == $password");
                   checkPost(login, password, context);
-                  if (context.read<AuthBloc>().state == AuthSuccessState()) {
-                    print(
-                        "context.read<AuthBloc>().state == AuthSuccessState()");
-                    context.read<ProviderBloc>().add(GameProviderEvent());
-                  }
+                  //if (context.read<AuthBloc>().state is AuthSuccessState) {
+                  print("context.read<AuthBloc>().state == AuthSuccessState()");
+                  context.read<ProviderBloc>().add(GameProviderEvent());
+                  //}
                   //context.read<AuthBloc>().add(AuthInEvent(login, password));
                 },
                 child: const Text("Auth.")),
