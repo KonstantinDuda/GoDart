@@ -18,6 +18,7 @@ import (
 
 var db *gorm.DB
 var err error
+var myErray []int
 
 //clients := int[]{}
 
@@ -47,6 +48,8 @@ func homePageWS(w http.ResponseWriter, r *http.Request) {
 		WriteBufferSize: 1024,
 	}
 
+	//erray := []int{0,0,0,0,0,0,0,0,0}
+	myErray = []int{0, 0, 0, 0, 0, 0, 0, 0, 0}
 	wsh, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		fmt.Println(err)
@@ -56,22 +59,42 @@ func homePageWS(w http.ResponseWriter, r *http.Request) {
 	ip := wsh.LocalAddr().String()
 
 	for {
-		data := ""
+		//data := ""
 		t, msg, err := wsh.ReadMessage()
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		data = string(msg)
+		//data = string(msg)
+		fmt.Println("msg: ", msg)
+		var i = 0
+		/*decode :=*/ json.Unmarshal(msg, &i)
+		myErray[i] = 1
+		fmt.Println("myErray: ", myErray)
+		strMyErray := myErrayToString(myErray)
 		//decod := json.Unmarshal(msg, &data)
-		fmt.Println("Decode: ", data)
+		fmt.Println("msg json.Unmarshal: ", i)
+		//fmt.Println("Decode: ", decode)
+		//fmt.Println("Decode: ", data)
 		fmt.Println("Ip: ", ip)
 		fmt.Println("Type: ", t)
 		//wsh.WriteMessage(_, ip)
-		wsh.WriteMessage(websocket.TextMessage, []byte(ip))
+		//wsh.WriteMessage(websocket.TextMessage, []byte(data))
+		fmt.Println("strMyErray: ", strMyErray)
+		wsh.WriteMessage(websocket.TextMessage, []byte(strMyErray))
 
 	}
 
+}
+
+func myErrayToString(erray []int) string {
+	str := ""
+	for i := 0; i < len(erray); i++ {
+		element := string(erray[i])
+		fmt.Println("myErrayToString: ", element)
+		str += element
+	}
+	return str
 }
 
 func handleRequests() {
