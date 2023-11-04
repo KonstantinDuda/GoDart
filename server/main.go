@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 
 	//"strconv"
 
@@ -69,7 +70,7 @@ func homePageWS(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("msg: ", msg)
 		var i = 0
 		/*decode :=*/ json.Unmarshal(msg, &i)
-		myErray[i] = 1
+		//myErray[i] = 1
 		fmt.Println("myErray: ", myErray)
 		strMyErray := myErrayToString(myErray)
 		//decod := json.Unmarshal(msg, &data)
@@ -90,9 +91,12 @@ func homePageWS(w http.ResponseWriter, r *http.Request) {
 func myErrayToString(erray []int) string {
 	str := ""
 	for i := 0; i < len(erray); i++ {
-		element := string(erray[i])
-		fmt.Println("myErrayToString: ", element)
+		//fmt.Println("erray[i]", erray[i])
+		//element := string(rune(erray[i]))
+		element := strconv.Itoa(erray[i])
+		//fmt.Println("myErrayToString: ", element)
 		str += element
+		//fmt.Println("str: ", str)
 	}
 	return str
 }
@@ -100,6 +104,7 @@ func myErrayToString(erray []int) string {
 func handleRequests() {
 	log.Println("Starting developer server at http://127.0.0.1:10000/in")
 	log.Println("Quit the server with CONTROL-C.")
+	fmt.Println("func handleRequests")
 
 	/*myRouter := mux.NewRouter().StrictSlash(true)
 	myRouter.HandleFunc("/", homePage)

@@ -39,6 +39,10 @@ class App extends StatelessWidget {
                 print("state is AuthorisationPage");
                 return const AuthorisationPage();
               }
+              /*if (state is WebSocetConnectionState) {
+                print("state is WebSocetConnectionState");
+                return const WebSocetConnectionPage();
+              }*/
               if (state is GameProviderState) {
                 print("state is GameProviderState");
                 return const GamePage();

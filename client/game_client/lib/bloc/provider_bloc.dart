@@ -12,6 +12,8 @@ class LoadingProviderEvent extends ProviderEvent {}
 
 class AuthProviderEvent extends ProviderEvent {}
 
+class WebSocetConnectionEvent extends ProviderEvent {}
+
 class GameProviderEvent extends ProviderEvent {}
 
 /*class CheckEvent extends ProviderEvent {
@@ -35,6 +37,8 @@ class LoadingProviderState extends ProviderState {}
 
 class AuthProviderState extends ProviderState {}
 
+class WebSocetConnectionState extends ProviderState {}
+
 class GameProviderState extends ProviderState {}
 
 /*class CheckState extends ProviderState {
@@ -50,8 +54,10 @@ class ProviderBloc extends Bloc<ProviderEvent, ProviderState> {
   //final _database = RootDBProvider();
 
   ProviderBloc() : super(AuthProviderState()) {
-    on<LoadingProviderEvent>((event, emit) => emit(LoadingProviderState()));
+    //on<LoadingProviderEvent>((event, emit) => emit(LoadingProviderState()));
     on<AuthProviderEvent>((event, emit) => emit(AuthProviderState()));
+    on<WebSocetConnectionEvent>(
+        (event, emit) => emit(WebSocetConnectionState()));
     on<GameProviderEvent>((event, emit) => emit(GameProviderState()));
   }
 }
