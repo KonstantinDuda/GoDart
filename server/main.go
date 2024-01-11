@@ -20,6 +20,8 @@ import (
 var db *gorm.DB
 var err error
 var myErray []int
+var msgs [][]byte
+var wsh *websocket.Conn
 
 //clients := int[]{}
 
@@ -43,7 +45,7 @@ type MyUser struct {
 	fmt.Println("Endpoint Hit: HomePage")
 }*/
 
-func homePageWS(w http.ResponseWriter, r *http.Request) {
+/*func menu(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -51,7 +53,7 @@ func homePageWS(w http.ResponseWriter, r *http.Request) {
 
 	//erray := []int{0,0,0,0,0,0,0,0,0}
 	myErray = []int{0, 0, 0, 0, 0, 0, 0, 0, 0}
-	wsh, err := upgrader.Upgrade(w, r, nil)
+	wsh, err = upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -60,8 +62,51 @@ func homePageWS(w http.ResponseWriter, r *http.Request) {
 	ip := wsh.LocalAddr().String()
 
 	for {
+
+		t, msg, err := wsh.ReadMessage()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Println("msg: ", msg)
+		var i = 0
+		json.Unmarshal(msg, &i)
+
+		fmt.Println("myErray: ", myErray)
+		strMyErray := myErrayToString(myErray)
+		fmt.Println("msg json.Unmarshal: ", i)
+
+		fmt.Println("Ip: ", ip)
+		fmt.Println("Type: ", t)
+
+		fmt.Println("strMyErray: ", strMyErray)
+		wsh.WriteMessage(t, []byte(strMyErray))
+
+	}
+
+}*/
+
+func homePageWS(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+
+	//erray := []int{0,0,0,0,0,0,0,0,0}
+	myErray = []int{0, 0, 0, 0, 0, 0, 0, 0, 0}
+	wsh, err = upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	//ip := wsh.LocalAddr().String()
+
+	for {
 		//data := ""
 		t, msg, err := wsh.ReadMessage()
+		msgs = append(msgs, msg)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -77,7 +122,7 @@ func homePageWS(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("msg json.Unmarshal: ", i)
 		//fmt.Println("Decode: ", decode)
 		//fmt.Println("Decode: ", data)
-		fmt.Println("Ip: ", ip)
+		//fmt.Println("Ip: ", ip)
 		fmt.Println("Type: ", t)
 		//wsh.WriteMessage(_, ip)
 		//wsh.WriteMessage(websocket.TextMessage, []byte(data))
@@ -87,6 +132,14 @@ func homePageWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
+
+/*func game(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("game")
+}*/
+
+/*func gameVsAI(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("game vs AI")
+}*/
 
 func myErrayToString(erray []int) string {
 	str := ""
@@ -104,7 +157,7 @@ func myErrayToString(erray []int) string {
 func handleRequests() {
 	log.Println("Starting developer server at http://127.0.0.1:10000/in")
 	log.Println("Quit the server with CONTROL-C.")
-	fmt.Println("func handleRequests")
+	//fmt.Println("func handleRequests")
 
 	/*myRouter := mux.NewRouter().StrictSlash(true)
 	myRouter.HandleFunc("/", homePage)
@@ -119,6 +172,9 @@ func handleRequests() {
 
 	myRouter.HandleFunc("/in", in)
 	myRouter.HandleFunc("/ws", homePageWS)
+	//myRouter.HandleFunc("/menu", menu)
+	//myRouter.HandleFunc("/game", game)
+	//myRouter.HandleFunc("/gamevsai", gameVsAI)
 
 	http.ListenAndServe(":10000", myRouter) //)
 }
@@ -147,8 +203,8 @@ func in(w http.ResponseWriter, r *http.Request) {
 	uuid := fmt.Sprintf("%x-%x-%x-%x-%x",
 		userToken[0:4], userToken[4:6], userToken[6:8], userToken[8:10], userToken[10:])
 
-	fmt.Println(uuid)
-	fmt.Fprintf(w, "Hello, %s! Your password is %s. Your Token: %s", user.Name, user.Password, uuid)
+	//fmt.Println(uuid)
+	fmt.Fprintf( /*w, "Hello, %s! Your password is %s. Your Token: %s", user.Name, user.Password, */ w, uuid)
 	playersOnline(user)
 }
 
