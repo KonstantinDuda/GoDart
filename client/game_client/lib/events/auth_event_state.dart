@@ -32,6 +32,12 @@ class AuthState extends Equatable {
 
 class AuthAwaitState extends AuthState {}
 
-class AuthSuccessState extends AuthState {}
+class AuthSuccessState extends AuthState {
+  final String token;
+  const AuthSuccessState(this.token);
+
+  @override
+  List<Object> get props => [token];
+}
 
 class AuthFailState extends AuthState {}

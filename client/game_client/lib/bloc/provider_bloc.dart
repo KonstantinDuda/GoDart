@@ -12,9 +12,15 @@ class LoadingProviderEvent extends ProviderEvent {}
 
 class AuthProviderEvent extends ProviderEvent {}
 
-class WebSocetConnectionEvent extends ProviderEvent {}
+class MenuProviderEvent extends ProviderEvent {}
 
-class GameProviderEvent extends ProviderEvent {}
+class GameProviderEvent extends ProviderEvent {
+  final bool vsHuman;
+  const GameProviderEvent(this.vsHuman);
+
+  @override
+  List<Object> get props => [vsHuman];
+}
 
 /*class CheckEvent extends ProviderEvent {
   final RootTaskNew task;
@@ -37,9 +43,15 @@ class LoadingProviderState extends ProviderState {}
 
 class AuthProviderState extends ProviderState {}
 
-class WebSocetConnectionState extends ProviderState {}
+class MenuProviderState extends ProviderState {}
 
-class GameProviderState extends ProviderState {}
+class GameProviderState extends ProviderState {
+  final bool vsHuman;
+  const GameProviderState(this.vsHuman);
+
+  @override
+  List<Object> get props => [vsHuman];
+}
 
 /*class CheckState extends ProviderState {
   final RootTaskNew task;
@@ -56,8 +68,8 @@ class ProviderBloc extends Bloc<ProviderEvent, ProviderState> {
   ProviderBloc() : super(AuthProviderState()) {
     //on<LoadingProviderEvent>((event, emit) => emit(LoadingProviderState()));
     on<AuthProviderEvent>((event, emit) => emit(AuthProviderState()));
-    on<WebSocetConnectionEvent>(
-        (event, emit) => emit(WebSocetConnectionState()));
-    on<GameProviderEvent>((event, emit) => emit(GameProviderState()));
+    on<MenuProviderEvent>((event, emit) => emit(MenuProviderState()));
+    on<GameProviderEvent>(
+        (event, emit) => emit(GameProviderState(event.vsHuman)));
   }
 }

@@ -53,40 +53,55 @@ class _AuthorisationPage extends State<AuthorisationPage> {
     String login = '';
     String password = '';
     return BlocBuilder<AuthBloc, AuthState>(builder: ((context, state) {
-      return MaterialApp(
-        home: Scaffold(
-            body: Column(
-          children: <Widget>[
-            Text(loginText),
-            TextField(
-              controller: TextEditingController(text: login),
-              onChanged: (value) {
-                login = value;
-              },
-            ),
-            const Text(""),
-            Text(passwordText),
-            TextField(
-              onChanged: (value) {
-                password = value;
-              },
-              controller: TextEditingController(text: password),
-            ),
-            TextButton(
-                onPressed: () {
-                  print(
-                      "Button is pressed. Login == $login. Password == $password");
-                  checkPost(login, password, context);
-                  //if (context.read<AuthBloc>().state is AuthSuccessState) {
-                  print("context.read<AuthBloc>().state == AuthSuccessState()");
-                  context.read<ProviderBloc>().add(GameProviderEvent());
-                  //}
-                  //context.read<AuthBloc>().add(AuthInEvent(login, password));
+      if (state is AuthAwaitState) {
+        return MaterialApp(
+          home: Scaffold(
+              body: Column(
+            children: <Widget>[
+              Text(loginText),
+              TextField(
+                controller: TextEditingController(text: login),
+                onChanged: (value) {
+                  login = value;
                 },
-                child: const Text("Auth.")),
-          ],
-        )),
-      );
+              ),
+              const Text(""),
+              Text(passwordText),
+              TextField(
+                onChanged: (value) {
+                  password = value;
+                },
+                controller: TextEditingController(text: password),
+              ),
+              TextButton(
+                  onPressed: () {
+                    print(
+                        "Button is pressed. Login == $login. Password == $password");
+                    checkPost(login, password, context);
+                    //if (context.read<AuthBloc>().state is AuthSuccessState) {
+                    print(
+                        "context.read<AuthBloc>().state == AuthSuccessState()");
+                    //context
+                    //  .read<ProviderBloc>()
+                    //.add(MenuProviderEvent()); //GameProviderEvent());
+                    //}
+                    //context.read<AuthBloc>().add(AuthInEvent(login, password));
+                  },
+                  child: const Text("Auth.")),
+            ],
+          )),
+        );
+      } else if (state is AuthSuccessState) {
+        //context.read<AuthBloc>().add(AuthInEvent(login, password));
+        context.read<ProviderBloc>().add(MenuProviderEvent());
+        return const Text("Loading");
+      } else if (state is AuthFailState) {
+        print("auth state is Fail");
+        return const Text("Loading");
+      } else {
+        print("auth is else");
+        return const Text("Loading");
+      }
     }));
   }
 

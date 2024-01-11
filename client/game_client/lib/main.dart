@@ -10,6 +10,7 @@ import 'bloc/observer.dart';
 import 'bloc/provider_bloc.dart';
 //import 'events/auth_event_state.dart';
 import 'view/authorisation_page.dart';
+import 'view/menu.dart';
 
 Future<void> main() async {
   Bloc.observer = SimpleBlocObserver();
@@ -32,17 +33,17 @@ class App extends StatelessWidget {
       child: BlocProvider(
         create: (_) => AuthBloc(),
         child: BlocProvider(
-          create: (_) => GameBloc(),
+          create: (_) => GameBloc(false),
           child: BlocBuilder<ProviderBloc, ProviderState>(
             builder: (_, state) {
               if (state is AuthProviderState) {
                 print("state is AuthorisationPage");
                 return const AuthorisationPage();
               }
-              /*if (state is WebSocetConnectionState) {
-                print("state is WebSocetConnectionState");
-                return const WebSocetConnectionPage();
-              }*/
+              if (state is MenuProviderState) {
+                print("state is MenuState");
+                return const MenuPage();
+              }
               if (state is GameProviderState) {
                 print("state is GameProviderState");
                 return const GamePage();

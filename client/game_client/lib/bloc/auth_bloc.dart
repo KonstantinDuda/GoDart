@@ -29,6 +29,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       //print(await http.read(url));
       print(await http.get(url)); // Uri.https('example.com', 'foobar.txt')));
+
+      emit(AuthSuccessState(response.body));
+    } else {
+      emit(
+          AuthFailState()); //TODO add cheking name and password, add result to AuthFailState()
     }
     /*if (event.login == '') {
       setState(() {
@@ -40,17 +45,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         passwordText += '!';
       });
     }*/
-
-    emit(AuthSuccessState());
   }
 
   _registration(AuthRegistrationEvent event, Emitter emit) {
     print("Auth Regist...");
-    emit(AuthSuccessState());
+    //emit(AuthRegistrationState());
   }
 
   _fail(AuthFailEvent event, Emitter emit) {
     print("Auth Fail Event");
-    emit(AuthSuccessState());
+    //emit(AuthFailState());
   }
 }

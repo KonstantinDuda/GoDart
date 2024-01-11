@@ -39,8 +39,10 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 }*/
 
 class GameBloc extends Bloc<GameEvent, List<int>> {
-  GameBloc() : super([0, 0, 0, 0, 0, 0, 0, 0, 0]) {
-    _connection();
+  final bool vsHuman;
+  GameBloc(this.vsHuman) : super([0, 0, 0, 0, 0, 0, 0, 0, 0]) {
+    //_connection();
+    on<GameEventConnection>(_eventConnection);
     on<GameEventTap>(_tap);
     on<GameEventClose>(_close);
   }
@@ -48,7 +50,7 @@ class GameBloc extends Bloc<GameEvent, List<int>> {
   var messages = <String>[];
   var channel = WebSocketChannel.connect(Uri.parse('ws://localhost:10000/ws'));
 
-  _connection() {
+  /*_connection() {
     print("connection in GameBloc");
     channel.stream.listen(
         (listenEvent) => (() {
@@ -59,6 +61,29 @@ class GameBloc extends Bloc<GameEvent, List<int>> {
       return messages.add('Error: $error');
     });
     channel.sink.add("Success connection");
+  }*/
+
+  _eventConnection(GameEventConnection event, Emitter emit) {
+    if (vsHuman) {
+      channel = WebSocketChannel.connect(Uri.parse('ws://localhost:10000/vh'));
+    } else {
+      channel = WebSocketChannel.connect(Uri.parse('ws://localhost:10000/vp'));
+    }
+    /*channel.stream.listen(
+        (listenEvent) => (() {
+              messages.add(listenEvent);
+              print("listenEvent in GameBloc == $listenEvent");
+            }), onError: (error) {
+      //emit(GameStateFail());
+      return messages.add('Error: $error');
+    });
+    if (event.player == true) {
+      channel.sink.add(1);
+      print("play vs Player");
+    } else {
+      channel.sink.add(0);
+      print("play vs AI");
+    }*/
   }
 
   _tap(GameEventTap event, Emitter emit) {

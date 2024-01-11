@@ -7,7 +7,13 @@ class GameEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class GameEventConnection extends GameEvent {}
+class GameEventConnection extends GameEvent {
+  final bool player;
+  const GameEventConnection(this.player);
+
+  @override
+  List<Object> get props => [player];
+}
 
 /*class GameEventTap extends GameEvent {
   final String tile;
@@ -19,6 +25,7 @@ class GameEventConnection extends GameEvent {}
 
 class GameEventTap extends GameEvent {
   final int tile;
+  //final playerToken;
   const GameEventTap(this.tile);
 
   @override
