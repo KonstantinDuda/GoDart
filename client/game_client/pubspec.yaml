@@ -1,23 +1,27 @@
 name: game_client
-description: A new Flutter project.
-publish_to: 'none'
-version: 0.1.0
+description: "A new Flutter project."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
 
 environment:
-  sdk: '>=2.19.6 <3.0.0'
+  sdk: ^3.8.1
 
 dependencies:
-  web_socket_channel: ^2.3.0
-  http: ^0.13.5
-  flutter_bloc: ^ 8.0.1
-  equatable: ^ 2.0.3
   flutter:
     sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  equatable: ^2.0.8
+  flutter_bloc: ^9.1.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+
+  flutter_lints: ^5.0.0
 
 flutter:
+
   uses-material-design: true
