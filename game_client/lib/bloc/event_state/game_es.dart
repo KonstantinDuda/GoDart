@@ -11,7 +11,8 @@ class GameCellTapped extends GameEvent {
 
 class GameUpdateReceived extends GameEvent {
   final List<String> field;
-  GameUpdateReceived(this.field);
+  final String winner;
+  GameUpdateReceived(this.field, this.winner);
 }
 
 // States
@@ -23,7 +24,8 @@ class GameLoading extends GameState {}
 
 class GameLoaded extends GameState {
   final List<String> field;
-  GameLoaded(this.field);
+  final String winner;
+  GameLoaded(this.field, this.winner);
 }
 
 class GameError extends GameState {

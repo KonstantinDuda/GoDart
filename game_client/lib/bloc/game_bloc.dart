@@ -24,7 +24,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       channel.stream.listen((message) {
         final data = jsonDecode(message);
         final board = List<String>.from(data["board"]);
-        add(GameUpdateReceived(board));
+        final winner = (data["winner"] ?? "") as String;
+        add(GameUpdateReceived(board, winner));
       });
     } catch (e) {
       emit(GameError("Не вдалося підключитись"));
@@ -32,7 +33,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   _update(GameUpdateReceived event, Emitter<GameState> emit) async {
-    emit(GameLoaded(event.field));
+    emit(GameLoaded(event.field, event.winner));
   }
 
   _increment(GameCellTapped event, Emitter<GameState> emit) async {
