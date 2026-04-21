@@ -13,6 +13,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameConnectToServer>(_connect);
     on<GameUpdateReceived>(_update);
     on<GameCellTapped>(_increment);
+    on<NewGameRequested>(_newGame);
   }
 
   _connect(GameConnectToServer event, Emitter<GameState> emit) async {
@@ -39,23 +40,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   _increment(GameCellTapped event, Emitter<GameState> emit) async {
     final map = jsonEncode({"index": event.index});
     channel.sink.add(map);
-    // emit(GameLoading());
+  }
 
-    // try {
-    //   final response = await http.post(
-    //     Uri.parse('http://localhost:8080/increment'),
-    //   );
-
-    //   if (response.statusCode == 200) {
-    //     final data = jsonDecode(response.body);
-    //     final newValue = data['count'] as int;
-    //     emit(GameLoaded(newValue));
-    //   } else {
-    //     emit(GameError("Помилка сервера: ${response.statusCode}"));
-    //   }
-    // } catch (e) {
-    //   emit(GameError("Не вдалось з'єднатись з сервером"));
-    // }
+  _newGame(NewGameRequested event, Emitter<GameState> emit) async {
+    channel.sink.add(jsonEncode({"new_game": 1}));
   }
 
   @override

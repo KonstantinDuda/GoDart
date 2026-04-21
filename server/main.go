@@ -61,16 +61,26 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		idx := msg["index"]
 		// Логіка
 		mu.Lock()
-		if board[idx] == "" && checkWinner() == "" {
-			board[idx] = currentSymbol
+		if idx >= 0 && idx < 9 {
+			if board[idx] == "" && checkWinner() == "" {
+				board[idx] = currentSymbol
 
-			if currentSymbol == "X" {
-				currentSymbol = "O"
-			} else {
-				currentSymbol = "X"
+				if currentSymbol == "X" {
+					currentSymbol = "O"
+				} else {
+					currentSymbol = "X"
+				}
 			}
 		}
 		mu.Unlock()
+
+		newGame := msg["new_game"]
+		if newGame == 1 {
+			mu.Lock()
+			board = [9]string{"", "", "", "", "", "", "", "", ""}
+			currentSymbol = "X"
+			mu.Unlock()
+		}
 
 		// Відправляємо нове значення в канал для розсилки всім
 		broadcastBoard()

@@ -15,6 +15,8 @@ class GameUpdateReceived extends GameEvent {
   GameUpdateReceived(this.field, this.winner);
 }
 
+class NewGameRequested extends GameEvent {}
+
 // States
 abstract class GameState {}
 

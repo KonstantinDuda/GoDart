@@ -20,14 +20,6 @@ class RootPage extends StatelessWidget {
     );
   }
 
-  // winnerText(GameState state) {
-  //   if (state is GameLoaded && state.winner.isNotEmpty) {
-  //     return Text("Winner: ${state.winner}");
-  //   } else {
-  //     return Text("No winner yet");
-  //   }
-  // }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,7 +79,7 @@ class RootPage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          context.read<GameBloc>().add(GameConnectToServer());
+          context.read<GameBloc>().add(NewGameRequested());
         },
         backgroundColor: Colors.lightBlue,
         foregroundColor: Colors.black,
