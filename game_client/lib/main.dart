@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'bloc/event_state/game_es.dart';
-import 'observer.dart';
+import 'bloc/gameplay_bloc.dart';
 import 'bloc/provider_bloc.dart';
 import 'bloc/game_bloc.dart';
+import 'observer.dart';
 import 'view/root_page.dart';
 
 void main() {
@@ -25,8 +26,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Game',
-      home: BlocProvider(
-        create: (_) => GameBloc()..add(GameConnectToServer()),
+      home: MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => GameBloc()..add(GameConnectToServer())),
+          BlocProvider(create: (_) => GameplayBloc()),
+        ],
         child: const RootPage(),
       ),
     );
