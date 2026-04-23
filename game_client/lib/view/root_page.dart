@@ -40,6 +40,22 @@ class RootPage extends StatelessWidget {
       ),
       body: BlocBuilder<GameBloc, GameState>(
         builder: (context, state) {
+          var gameplay = GameplayEnum.twoPlonePC;
+          var winner = "";
+
+          if (state is GameLoaded) {
+            gameplay = state.gameplay;
+            winner = state.winner.isEmpty
+                ? ""
+                : (state.winner == "Draw"
+                      ? "Нічия!"
+                      : "Переможець: ${state.winner}");
+          } else  if(state is GameError) {
+            //print("State isn't GameLoaded");
+            gameplay = state.gameplay;
+            winner = state.message;
+            print(winner);
+          }
           return BlocBuilder<GameplayBloc, GameplayState>(
             builder: (context, gameplayState) {
               return Row(
@@ -49,11 +65,12 @@ class RootPage extends StatelessWidget {
                     children: [
                       TextButton(
                         onPressed: () {
-                          context.read<GameplayBloc>().add(TwoPlayersOnOneDeviceEvent());
+                          context.read<GameBloc>().add(
+                            ChangeGameplay(GameplayEnum.twoPlonePC),
+                          );
                         },
                         style: TextButton.styleFrom(
-                          backgroundColor:
-                              gameplayState is TwoPlayersOnOneDevice
+                          backgroundColor: gameplay == GameplayEnum.twoPlonePC
                               ? Colors.lightBlue
                               : Colors.grey,
                           foregroundColor: Colors.black,
@@ -62,10 +79,12 @@ class RootPage extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: () {
-                          context.read<GameplayBloc>().add(PlayWithComputerEvent());
+                          context.read<GameBloc>().add(
+                            ChangeGameplay(GameplayEnum.vsAI),
+                          );
                         },
                         style: TextButton.styleFrom(
-                          backgroundColor: gameplayState is PlayWithComputer
+                          backgroundColor: gameplay == GameplayEnum.vsAI
                               ? Colors.lightBlue
                               : Colors.grey,
                           foregroundColor: Colors.black,
@@ -74,10 +93,12 @@ class RootPage extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: () {
-                          context.read<GameplayBloc>().add(PlayOnlineEvent());
+                          context.read<GameBloc>().add(
+                            ChangeGameplay(GameplayEnum.playOnline),
+                          );
                         },
                         style: TextButton.styleFrom(
-                          backgroundColor: gameplayState is PlayOnline
+                          backgroundColor: gameplay == GameplayEnum.playOnline
                               ? Colors.lightBlue
                               : Colors.grey,
                           foregroundColor: Colors.black,
@@ -96,20 +117,19 @@ class RootPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[
                         //const Text('Push the button to play:'),
-                        if (state is GameLoaded && state.winner.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 20),
-                            child: Text(
-                              state.winner == "Draw"
-                                  ? "Нічия!"
-                                  : "Переможець: ${state.winner}",
-                              style: TextStyle(
-                                fontSize: 20,
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
+                        SizedBox(
+                          height: 30,
+                          width: 200,
+                          child: Text(
+                            winner,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
+                        ),
                         SizedBox(
                           width: 200,
                           height: 200,

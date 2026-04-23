@@ -18,6 +18,15 @@ class PlayOnlineEvent extends GameplayEvent {
   List<Object?> get props => throw UnimplementedError();
 }
 
+class CellTapped extends GameplayEvent {
+  final int index;
+
+  CellTapped(this.index);
+
+  @override
+  List<Object?> get props => [index];
+}
+
 // States
 abstract class GameplayState extends Equatable {}
 
