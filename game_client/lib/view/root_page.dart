@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/gameplay_bloc.dart';
 
 import '../bloc/event_state/game_es.dart';
-import '../bloc/event_state/gameplay_es.dart';
 import '../bloc/game_bloc.dart';
+//import '../bloc/event_state/gameplay_es.dart';
+//import '../bloc/gameplay_bloc.dart';
 
 class RootPage extends StatelessWidget {
   const RootPage({super.key});
@@ -41,6 +41,7 @@ class RootPage extends StatelessWidget {
       body: BlocBuilder<GameBloc, GameState>(
         builder: (context, state) {
           var gameplay = GameplayEnum.twoPlonePC;
+          var messageColor = Colors.green;
           var winner = "";
 
           if (state is GameLoaded) {
@@ -54,10 +55,11 @@ class RootPage extends StatelessWidget {
             //print("State isn't GameLoaded");
             gameplay = state.gameplay;
             winner = state.message;
+            messageColor = Colors.red;
             print(winner);
           }
-          return BlocBuilder<GameplayBloc, GameplayState>(
-            builder: (context, gameplayState) {
+          // return BlocBuilder<GameplayBloc, GameplayState>(
+          //   builder: (context, gameplayState) {
               return Row(
                 children: [
                   Column(
@@ -96,6 +98,7 @@ class RootPage extends StatelessWidget {
                           context.read<GameBloc>().add(
                             ChangeGameplay(GameplayEnum.playOnline),
                           );
+                          
                         },
                         style: TextButton.styleFrom(
                           backgroundColor: gameplay == GameplayEnum.playOnline
@@ -119,13 +122,13 @@ class RootPage extends StatelessWidget {
                         //const Text('Push the button to play:'),
                         SizedBox(
                           height: 30,
-                          width: 200,
+                          // width: 200,
                           child: Text(
                             winner,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 20,
-                              color: Colors.green,
+                              color: messageColor, //Colors.green,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -158,8 +161,8 @@ class RootPage extends StatelessWidget {
                   //),
                 ],
               );
-            },
-          );
+            //},
+          //);
         },
       ),
       floatingActionButton: FloatingActionButton.extended(

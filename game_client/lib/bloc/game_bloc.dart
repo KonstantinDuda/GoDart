@@ -74,7 +74,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       [2, 4, 6],
     ];
 
-
     var isFull = true;
     checkWinner() {
       for (var pattern in winPatterns) {
@@ -85,7 +84,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         }
       }
 
-    if (localBoard.contains("")) {
+      if (localBoard.contains("")) {
         isFull = false;
       }
 
@@ -106,16 +105,37 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           if (localBoard[index] == "X") hasX = true;
           if (localBoard[index] == "O") hasO = true;
         }
-      if(!(hasX && hasO)) {
+        if (!(hasX && hasO)) {
           canAnyoneWin = true;
           break;
         }
       }
 
-      if(!canAnyoneWin) {
+      if (!canAnyoneWin) {
         return "Draw";
       }
       return "";
+    }
+
+    winnerDrawCheck(bool isLocalTurnChange) {
+      var winner = checkWinner();
+      if (winner != "") {
+        // print("Winner: $winner");
+        emit(GameLoaded(localBoard, winner, gameplayState));
+      } else {
+        // print("No winner yet");
+        var check = checkDraw();
+        if (check == "Draw") {
+          print("It's a draw!");
+          emit(GameLoaded(List.from(localBoard), "Draw", gameplayState));
+        } else {
+          // print("Switching turn");
+          if (isLocalTurnChange) {
+            localTurn = localTurn == "X" ? "O" : "X";
+          }
+          emit(GameLoaded(List.from(localBoard), "", gameplayState));
+        }
+      }
     }
 
     if (gameplayState == GameplayEnum.playOnline) {
@@ -128,7 +148,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         return;
       } else {
         localBoard[event.index] = localTurn;
-        var winner = checkWinner();
+        /*var winner = checkWinner();
         if (winner != "") {
           // print("Winner: $winner");
           emit(GameLoaded(localBoard, winner, gameplayState));
@@ -143,15 +163,85 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             localTurn = localTurn == "X" ? "O" : "X";
             emit(GameLoaded(List.from(localBoard), "", gameplayState));
           }
-        }
+        }*/
+        winnerDrawCheck(true);
       }
     } else {
       // TODO: Implement AI move logic here
+      localBoard[event.index] = "X";
+      localTurn = "O";
+      var stepCounter = 0;
+      for (var i = 0; i < localBoard.length; i++) {
+        if (localBoard[i] == "") {
+          stepCounter++;
+        }
+      }
+      if (stepCounter == 8) {
+        if (localBoard[4] == "") {
+          localBoard[4] = "O";
+        } else {
+          localBoard[0] = "O";
+        }
+      } else {
+        canXwin(String symbol) {
+          var canIsXwin = false;
+          for (var p in winPatterns) {
+            int isXcount = 0;
+            int emptyCount = 0;
+            int emptyIndex = -1;
+            for (var index in p) {
+              if (localBoard[index] == symbol) isXcount++;
+              if (localBoard[index] == "") {
+                emptyCount++;
+                emptyIndex = index;
+              }
+            }
+            if (isXcount == 2 && emptyCount == 1) {
+              localBoard[emptyIndex] = "O";
+              return true;
+            }
+          }
+          return canIsXwin;
+        }
+
+        var canAiWin = canXwin("O");
+        if (!canAiWin) {
+          var canPlayerWin = canXwin("X");
+          if (!canPlayerWin) {
+            var emptyCells = <int>[];
+            for (var i = 0; i < localBoard.length; i++) {
+              if (localBoard[i] == "") {
+                emptyCells.add(i);
+              }
+            }
+            if (emptyCells.isNotEmpty) {
+              for (int index in emptyCells) {
+                var isStepDone = false;
+                for (var p in winPatterns) {
+                  if (p.contains(index)) {
+                    localBoard[index] = "O";
+                    isStepDone = true;
+                    break;
+                  }
+                }
+                if (isStepDone) {
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      winnerDrawCheck(false);
+      localTurn = "X";
+
+      //emit(GameLoaded(List.from(localBoard), "", gameplayState));
     }
   }
 
   _newGame(NewGameRequested event, Emitter<GameState> emit) async {
-    if(gameplayState == GameplayEnum.playOnline) {
+    if (gameplayState == GameplayEnum.playOnline) {
       channel.sink.add(jsonEncode({"new_game": 1}));
     } else {
       localBoard = List<String>.filled(9, "");
@@ -163,11 +253,18 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   _changeGameplay(ChangeGameplay event, Emitter<GameState> emit) async {
     gameplayState = event.gameplay;
     print("Gameplay changed to: $gameplayState");
+    localBoard = List<String>.filled(9, "");
     if (gameplayState != GameplayEnum.playOnline) {
-      localBoard = List<String>.filled(9, "");
       emit(GameLoaded(List.from(localBoard), "", gameplayState));
     } else {
+      if(channel.closeCode != null) {
       channel.sink.add(jsonEncode({"new_game": 1}));
+      } else {
+        print("WebSocket channel is not initialized");
+        emit(GameError("Помилка з'єднання з сервером", gameplayState));
+      }
+
+
     }
   }
 

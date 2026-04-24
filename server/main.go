@@ -140,5 +140,27 @@ func checkWinner() string {
 		return "Draw"
 	}
 
+	canAnyoneWin := false
+	for _, pattern := range winPatterns {
+		hasX := false
+		hasO := false
+		for _, idx := range pattern {
+			if board[idx] == "X" {
+				hasX = true
+			}
+			if board[idx] == "O" {
+				hasO = true
+			}
+		}
+		if !(hasX && hasO) {
+			canAnyoneWin = true
+			break
+		}
+	}
+
+	if !canAnyoneWin {
+		return "Draw"
+	}
+
 	return ""
 }
