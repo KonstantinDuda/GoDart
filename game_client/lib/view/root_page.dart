@@ -46,6 +46,16 @@ class RootPage extends StatelessWidget {
 
           if (state is GameLoaded) {
             gameplay = state.gameplay;
+            if(state.winner.isNotEmpty) {
+              messageColor = Colors.green;
+              if(state.winner == "Draw") {
+                winner = "Нічия!";
+              } else if(state.winner == "X" || state.winner == "O") {
+                winner = "Переможець: ${state.winner}";
+              } else {
+                winner = state.winner;
+              }
+            }
             winner = state.winner.isEmpty
                 ? ""
                 : (state.winner == "Draw"

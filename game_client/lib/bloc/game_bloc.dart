@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+//import 'dart:io';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 //import 'package:http/http.dart' as http;
@@ -12,6 +13,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   var gameplayState = GameplayEnum.twoPlonePC;
   var localBoard = List<String>.filled(9, "");
   var localTurn = "X";
+  var localWinner = "";
 
   GameBloc() : super(GameInitial()) {
     on<GameConnectToServer>(_connect);
@@ -25,43 +27,70 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     emit(GameLoading());
     print("Connecting to WebSocket server..., gameplay = $gameplayState");
 
-    try {
-      channel = WebSocketChannel.connect(Uri.parse('ws://localhost:8080/ws'));
+    if (gameplayState != GameplayEnum.playOnline) {
+      print("Not connecting to server, gameplay is not online. Resetting local game state.");
+      emit(GameLoaded(List.from(localBoard), localWinner, gameplayState));
+    } else {
+      try {
+        channel = WebSocketChannel.connect(Uri.parse('ws://localhost:8080/ws'));
 
-      await channel.ready.timeout(const Duration(seconds: 5));
+        //await channel.ready.timeout(const Duration(seconds: 5));
 
-      channel.stream.listen(
-        (message) {
+        channel.stream.listen((message) {
           final data = jsonDecode(message);
-          final board = List<String>.from(data["board"]);
-          final winner = (data["winner"] ?? "") as String;
-          add(GameUpdateReceived(board, winner));
-        },
-        onError: (error) {
-          print("WebSocket error: $error");
-          emit(GameError("Помилка з'єднання: $error", gameplayState));
-        },
-        onDone: () {
-          print("WebSocket connection closed");
-          emit(GameError("З'єднання закрито", gameplayState));
-        },
-      );
-    } on TimeoutException {
-      print("Connection timeout");
-      emit(GameError("Не вдалося підключитись: таймаут", gameplayState));
-    } catch (e) {
-      print("Unexpected error: $e");
-      emit(GameError("Не вдалося підключитись", gameplayState));
-      add(GameUpdateReceived(List.from(localBoard), ""));
+          if(data.containsKey("symbol")) {
+            localTurn = data["symbol"];
+            return;
+          }
+          if(data.containsKey("status")) {
+            if(data["status"] == "waiting") {
+            print("Waiting for opponent...");
+            emit(GameLoaded(List.from(localBoard), "Очікування суперника...", gameplayState));
+            return;
+            }
+          } 
+          if(data.containsKey("board")) {
+            final board = List<String>.from(data["board"]);
+            final winner = (data["winner"] ?? "") as String;
+            final curentTurn = data["turn"] ?? "";
+            add(GameUpdateReceived(board, winner));
+          }
+        });
+
+        // if (channel.closeCode == null) {
+        //   channel.sink.add(jsonEncode({"new_game": 1}));
+        // } else {
+        //   print("WebSocket channel is not initialized");
+        //   emit(GameError("Помилка з'єднання з сервером", gameplayState));
+        // }
+      // } on TimeoutException {
+      //   print("Connection timeout");
+      //   emit(GameError("Не вдалося підключитись: таймаут", gameplayState));
+      } on WebSocketChannelException catch (e) {
+        print("Socket error: $e");
+        emit(
+          GameError("Сервер недоступний або порт закритий: $e", gameplayState),
+        );
+      } catch (e) {
+        print("Unexpected error: $e");
+        emit(GameError("Не вдалося підключитись", gameplayState));
+        add(GameUpdateReceived(List.from(localBoard), ""));
+      }
     }
   }
 
-  _update(GameUpdateReceived event, Emitter<GameState> emit) async {
+  _update(GameUpdateReceived event, Emitter<GameState> emit) /*async*/ {
     emit(GameLoaded(event.field, event.winner, gameplayState));
   }
 
   _tap(GameCellTapped event, Emitter<GameState> emit) async {
-    var draw = false;
+    //var draw = false;
+
+    if (gameplayState != GameplayEnum.playOnline && 
+    (localBoard[event.index] != "" || localWinner != "")) {
+      print("Cell already occupied or game over");
+      return;
+    }
 
     var winPatterns = [
       [0, 1, 2],
@@ -80,6 +109,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         if (localBoard[pattern[0]] != "" &&
             localBoard[pattern[0]] == localBoard[pattern[1]] &&
             localBoard[pattern[1]] == localBoard[pattern[2]]) {
+          localWinner = localTurn;
           return localTurn;
         }
       }
@@ -89,6 +119,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
 
       if (isFull) {
+        localWinner = "Draw";
         return "Draw";
       }
 
@@ -106,12 +137,17 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           if (localBoard[index] == "O") hasO = true;
         }
         if (!(hasX && hasO)) {
+          print("At least one winning pattern is still possible: $p");
           canAnyoneWin = true;
           break;
+        } else {
+          canAnyoneWin = false;
         }
       }
 
-      if (!canAnyoneWin) {
+      if (canAnyoneWin == false) {
+        print("It's a draw!");
+        localWinner = "Draw";
         return "Draw";
       }
       return "";
@@ -120,14 +156,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     winnerDrawCheck(bool isLocalTurnChange) {
       var winner = checkWinner();
       if (winner != "") {
-        // print("Winner: $winner");
+        print("Winner: $winner");
         emit(GameLoaded(localBoard, winner, gameplayState));
+        return winner;
       } else {
         // print("No winner yet");
         var check = checkDraw();
         if (check == "Draw") {
           print("It's a draw!");
           emit(GameLoaded(List.from(localBoard), "Draw", gameplayState));
+          return "Draw";
         } else {
           // print("Switching turn");
           if (isLocalTurnChange) {
@@ -136,6 +174,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           emit(GameLoaded(List.from(localBoard), "", gameplayState));
         }
       }
+      return "";
     }
 
     if (gameplayState == GameplayEnum.playOnline) {
@@ -167,8 +206,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         winnerDrawCheck(true);
       }
     } else {
-      // TODO: Implement AI move logic here
       localBoard[event.index] = "X";
+      var wd = winnerDrawCheck(false);
+      print("tap. WinnerDrawCheck done, winner/draw: $wd");
+      if (wd != "") {
+        return;
+      }
       localTurn = "O";
       var stepCounter = 0;
       for (var i = 0; i < localBoard.length; i++) {
@@ -182,6 +225,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         } else {
           localBoard[0] = "O";
         }
+      } else if (stepCounter == 6 &&
+          localBoard[4] == "X" &&
+          localBoard[8] == "X") {
+        localBoard[2] = "O";
       } else {
         canXwin(String symbol) {
           var canIsXwin = false;
@@ -234,37 +281,52 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
 
       winnerDrawCheck(false);
+      print("tap. WinnerDrawCheck done after AI move, winner/draw: $wd");
+
       localTurn = "X";
 
       //emit(GameLoaded(List.from(localBoard), "", gameplayState));
     }
   }
 
-  _newGame(NewGameRequested event, Emitter<GameState> emit) async {
+  _newGame(NewGameRequested event, Emitter<GameState> emit) /*async*/ {
     if (gameplayState == GameplayEnum.playOnline) {
       channel.sink.add(jsonEncode({"new_game": 1}));
     } else {
       localBoard = List<String>.filled(9, "");
       localTurn = "X";
+      localWinner = "";
       emit(GameLoaded(List.from(localBoard), "", gameplayState));
     }
   }
 
-  _changeGameplay(ChangeGameplay event, Emitter<GameState> emit) async {
+  _changeGameplay(ChangeGameplay event, Emitter<GameState> emit) /*async*/ {
     gameplayState = event.gameplay;
     print("Gameplay changed to: $gameplayState");
-    localBoard = List<String>.filled(9, "");
     if (gameplayState != GameplayEnum.playOnline) {
+      localBoard = List<String>.filled(9, "");
+      localTurn = "X";
+      localWinner = "";
       emit(GameLoaded(List.from(localBoard), "", gameplayState));
     } else {
-      if(channel.closeCode != null) {
-      channel.sink.add(jsonEncode({"new_game": 1}));
-      } else {
-        print("WebSocket channel is not initialized");
-        emit(GameError("Помилка з'єднання з сервером", gameplayState));
-      }
-
-
+      add(GameConnectToServer());
+      // try {
+      //   if (channel.closeCode == null) {
+      //     channel.sink.add(jsonEncode({"new_game": 1}));
+      //   } else {
+      //     print("WebSocket channel is not initialized");
+      //     emit(GameError("Помилка з'єднання з сервером", gameplayState));
+      //   }
+      // } on WebSocketChannelException catch (e) {
+      //   print("Socket error: $e");
+      //   emit(
+      //     GameError("Сервер недоступний або порт закритий: $e", gameplayState),
+      //   );
+      // } catch (e) {
+      //   print("Unexpected error: $e");
+      //   emit(GameError("Не вдалося підключитись", gameplayState));
+      //   add(GameUpdateReceived(List.from(localBoard), ""));
+      // }
     }
   }
 
