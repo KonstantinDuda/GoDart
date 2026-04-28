@@ -14,6 +14,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   var localBoard = List<String>.filled(9, "");
   var localTurn = "X";
   var localWinner = "";
+  var currentTurn = "";
 
   GameBloc() : super(GameInitial()) {
     on<GameConnectToServer>(_connect);
@@ -34,26 +35,41 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       try {
         channel = WebSocketChannel.connect(Uri.parse('ws://localhost:8080/ws'));
 
-        //await channel.ready.timeout(const Duration(seconds: 5));
+        await channel.ready.timeout(const Duration(seconds: 5));
 
         channel.stream.listen((message) {
           final data = jsonDecode(message);
-          if(data.containsKey("symbol")) {
-            localTurn = data["symbol"];
-            return;
-          }
+          print("Received message from server: $data");
           if(data.containsKey("status")) {
+            gameplayState = GameplayEnum.playOnline;
             if(data["status"] == "waiting") {
             print("Waiting for opponent...");
-            emit(GameLoaded(List.from(localBoard), "Очікування суперника...", gameplayState));
-            return;
+            //emit(GameLoaded(List.from(localBoard), "Очікування суперника...", gameplayState));
+            add(GameUpdateReceived(List.from(localBoard), "Очікування суперника..."));
+            //return;
+            } else if(data["status"] == "started") {
+
+              localBoard = List<String>.from(data["board"]);
+              currentTurn = data["turn"];
+              localTurn = data["symbol"] ?? localTurn;
+              print("Game started! Your symbol: $localTurn");
+
+              if(data.containsKey("winner")) {
+                localWinner = data["winner"];
+                if(localWinner != "" && localWinner != "Draw") {
+                print("Game ended. Winner: $localWinner");
+                add(GameUpdateReceived(List.from(localBoard), "Гра завершена! Ваш символ: $localTurn. Переможець: $localWinner"));
+                return;
+                } else if(localWinner == "Draw") {
+                  print("Game ended in a draw.");
+                  add(GameUpdateReceived(List.from(localBoard), localWinner));
+                  return;
+                }
+              }
+              print('winner != "" && winner != "Draw". localBoard: $localBoard');
+              add(GameUpdateReceived(List.from(localBoard), "Ваш символ: $localTurn. Хід: $currentTurn"));
+              //return;
             }
-          } 
-          if(data.containsKey("board")) {
-            final board = List<String>.from(data["board"]);
-            final winner = (data["winner"] ?? "") as String;
-            final curentTurn = data["turn"] ?? "";
-            add(GameUpdateReceived(board, winner));
           }
         });
 
@@ -85,10 +101,19 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   _tap(GameCellTapped event, Emitter<GameState> emit) async {
     //var draw = false;
+print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $currentTurn, local turn: $localTurn, local winner: $localWinner");
 
     if (gameplayState != GameplayEnum.playOnline && 
     (localBoard[event.index] != "" || localWinner != "")) {
       print("Cell already occupied or game over");
+      return;
+    } else if (gameplayState == GameplayEnum.playOnline && currentTurn != localTurn) {
+      print("It's not your turn. Current turn: $currentTurn, your symbol: $localTurn");
+      add(GameUpdateReceived(List.from(localBoard), "Очікування ходу суперника..."));
+      return;
+    } else if(gameplayState == GameplayEnum.playOnline && currentTurn == localTurn) {
+      channel.sink.add(jsonEncode({"index": event.index}));
+      print("Sent move to server: ${event.index}");
       return;
     }
 

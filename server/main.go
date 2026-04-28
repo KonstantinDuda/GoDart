@@ -10,21 +10,26 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// type Response struct {
-// 	Count int `json:"count"`
-// }
+type Room struct {
+	ID      string
+	Board   [9]string
+	Players []*websocket.Conn
+	Turn    string
+}
 
 var (
-	//counter int
-	board         = [9]string{"", "", "", "", "", "", "", "", ""}
-	currentSymbol = "X"
-	mu            sync.Mutex // Потрібно для безпечної роботи з данними з різних потоків
+	// board         = [9]string{"", "", "", "", "", "", "", "", ""}
+	// currentSymbol = "X"
+	// mu            sync.Mutex // Потрібно для безпечної роботи з данними з різних потоків
 
-	clients   = make(map[*websocket.Conn]bool)
-	broadcast = make(chan [9]string) // Chanal to sending new value
-	upgrader  = websocket.Upgrader{
+	// clients   = make(map[*websocket.Conn]bool)
+	// broadcast = make(chan [9]string) // Chanal to sending new value
+	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true }, // Дозволяємо всі підключення
 	}
+	rooms   = make(map[string]*Room)
+	waiting *websocket.Conn
+	roomsMu sync.Mutex
 )
 
 func main() {
@@ -32,7 +37,7 @@ func main() {
 	http.HandleFunc("/ws", handleConnections)
 
 	// Окремий потік для розсилки оновлень
-	go handleMessages()
+	//go handleMessages()
 
 	fmt.Println("WebSocket сервер запущено на :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -43,70 +48,161 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer ws.Close()
+	//defer ws.Close()
+	// Ми не закриваємо ws тут через defer, бо він має жити в handleMessages
 
-	clients[ws] = true
+	roomsMu.Lock()
+	if waiting == nil {
+		waiting = ws
+		roomsMu.Unlock()
+		fmt.Println("Waiting for an opponent...")
+		ws.WriteJSON(map[string]string{"status": "waiting",
+			"message": "Пошук суперника"})
+	} else {
+		player1 := waiting
+		player2 := ws
+		waiting = nil
 
-	ws.WriteJSON(map[string]interface{}{"board": board})
+		fmt.Println("Пара знайдена! Створюємо кімнату.")
 
-	for {
-		// Чекаємо на повідомлення від клієнта (наприклад, сигнал про натискання)
-		var msg map[string]int
-		err := ws.ReadJSON(&msg)
-		if err != nil {
-			break
+		roomID := fmt.Sprintf("room-%d", len(rooms)+1)
+		newRoom := &Room{
+			ID:      roomID,
+			Board:   [9]string{"", "", "", "", "", "", "", "", ""},
+			Players: []*websocket.Conn{player1, player2},
+			Turn:    "X",
 		}
-		fmt.Printf("handleConnections() msg is: %v\n", msg)
+		rooms[roomID] = newRoom
+		roomsMu.Unlock()
 
-		idx := msg["index"]
-		// Логіка
-		mu.Lock()
-		if idx >= 0 && idx < 9 {
-			if board[idx] == "" && checkWinner() == "" {
-				board[idx] = currentSymbol
+		go handleMessages(newRoom)
+		//broadcastToRoom(newRoom, "started")
+	}
 
-				if currentSymbol == "X" {
-					currentSymbol = "O"
-				} else {
-					currentSymbol = "X"
-				}
+}
+
+// func broadcastBoard() {
+// 	mu.Lock()
+// 	currentBoard := board
+// 	mu.Unlock()
+
+// 	broadcast <- currentBoard
+// }
+
+func broadcastToRoom(room *Room, status string) error {
+	msg := map[string]any{
+		"board":  room.Board,
+		"turn":   room.Turn,
+		"winner": checkWinner(room.Board),
+		"status": status}
+
+	for i, player := range room.Players {
+		err := player.WriteJSON(msg)
+		if err != nil {
+			log.Printf("Помилка відправки клієнту: %v", err)
+			player.Close()
+			// Видаляємо гравця з кімнати
+			room.Players = removePlayer(room.Players, player)
+			return err
+		} else {
+			if i == 0 {
+				player.WriteJSON(map[string]string{"symbol": "X"})
+			} else {
+				player.WriteJSON(map[string]string{"symbol": "O"})
 			}
 		}
-		mu.Unlock()
+	}
+	return nil
+}
 
-		newGame := msg["new_game"]
-		if newGame == 1 {
-			mu.Lock()
-			board = [9]string{"", "", "", "", "", "", "", "", ""}
-			currentSymbol = "X"
-			mu.Unlock()
+func handleMessages(room *Room) {
+	// Коли функція завершується, ми маємо закрити всі сокети в цій кімнаті
+	defer func() {
+		roomsMu.Lock()
+		delete(rooms, room.ID) // Видаляємо кімнату з пам'яті
+		roomsMu.Unlock()
+
+		for _, p := range room.Players {
+			p.Close()
+		}
+		fmt.Printf("Кімната %s закрита\n", room.ID)
+	}()
+
+	// 2. Відправляємо початковий стан обом гравцям
+	// Гравцю 0 кажемо, що він X, гравцю 1 — що він O
+	for i, conn := range room.Players {
+		symbol := "X"
+		if i == 1 {
+			symbol = "O"
+		}
+		conn.WriteJSON(map[string]interface{}{
+			"status": "started",
+			"board":  room.Board,
+			"turn":   room.Turn,
+			"symbol": symbol,
+		})
+	}
+
+	type PlayerMove struct {
+		Index  int
+		Symbol string
+	}
+	moves := make(chan PlayerMove)
+
+	// 3. Запускаємо горутину для читання повідомлень від кожного гравця
+	for i, conn := range room.Players {
+		symbol := "X"
+		if i == 1 {
+			symbol = "O"
 		}
 
-		// Відправляємо нове значення в канал для розсилки всім
-		broadcastBoard()
+		go func(c *websocket.Conn, s string) {
+			for {
+				var msg map[string]any
+				if err := c.ReadJSON(&msg); err != nil {
+					log.Printf("Помилка читання від клієнта: %v", err)
+					c.Close()
+					room.Players = removePlayer(room.Players, c)
+					return
+				}
+				if idx, ok := msg["index"]; ok {
+					moves <- PlayerMove{Index: int(idx.(float64)), Symbol: s}
+				}
+			}
+		}(conn, symbol)
 	}
-}
 
-func broadcastBoard() {
-	mu.Lock()
-	currentBoard := board
-	mu.Unlock()
-
-	broadcast <- currentBoard
-}
-
-func handleMessages() {
+	// 4. Основний цикл гри (обробка черги)
 	for {
-		updatedBoard := <-broadcast
-		msg := map[string]any{"board": updatedBoard, "winner": checkWinner()}
+		move := <-moves // Чекаємо на хід від будь-кого
+		fmt.Printf("Отримано хід: %s на позицію %d\n", move.Symbol, move.Index)
+		// Перевірка: чи зараз хід цього гравця?
+		if move.Symbol != room.Turn {
+			continue
+		}
 
-		// Send to all connected clients
-		for client := range clients {
-			err := client.WriteJSON(msg)
-			if err != nil {
-				log.Printf("Помилка відправки клієнту: %v", err)
-				client.Close()
-				delete(clients, client)
+		// Перевірка: чи клітинка вільна?
+		if room.Board[move.Index] == "" {
+			room.Board[move.Index] = move.Symbol
+
+			// Зміна черги
+			if room.Turn == "X" {
+				room.Turn = "O"
+			} else {
+				room.Turn = "X"
+			}
+
+			// Відправка оновлення обом
+			for _, conn := range room.Players {
+				err := conn.WriteJSON(map[string]any{
+					"status": "playing",
+					"board":  room.Board,
+					"turn":   room.Turn,
+					"winner": checkWinner(room.Board),
+				})
+				if err != nil {
+					return // Якщо не вдалося відправити — завершуємо горутину
+				}
 			}
 		}
 	}
@@ -119,7 +215,7 @@ var winPatterns = [8][3]int{
 	{0, 4, 8}, {2, 4, 6},
 }
 
-func checkWinner() string {
+func checkWinner(board [9]string) string {
 	for _, pattern := range winPatterns {
 		if board[pattern[0]] != "" &&
 			board[pattern[0]] == board[pattern[1]] &&
@@ -155,6 +251,8 @@ func checkWinner() string {
 		if !(hasX && hasO) {
 			canAnyoneWin = true
 			break
+		} else {
+			canAnyoneWin = false
 		}
 	}
 
@@ -163,4 +261,14 @@ func checkWinner() string {
 	}
 
 	return ""
+}
+
+func removePlayer(players []*websocket.Conn, player *websocket.Conn) []*websocket.Conn {
+	newPlayers := []*websocket.Conn{}
+	for _, p := range players {
+		if p != player {
+			newPlayers = append(newPlayers, p)
+		}
+	}
+	return newPlayers
 }

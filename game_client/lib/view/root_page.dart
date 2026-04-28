@@ -50,17 +50,14 @@ class RootPage extends StatelessWidget {
               messageColor = Colors.green;
               if(state.winner == "Draw") {
                 winner = "Нічия!";
-              } else if(state.winner == "X" || state.winner == "O") {
+                messageColor = Colors.orange;
+              //} else if(state.winner.contains("X") || state.winner.contains("O")) {
+              } else if(state.winner.contains("Переможець: ")) {
                 winner = "Переможець: ${state.winner}";
               } else {
                 winner = state.winner;
               }
             }
-            winner = state.winner.isEmpty
-                ? ""
-                : (state.winner == "Draw"
-                      ? "Нічия!"
-                      : "Переможець: ${state.winner}");
           } else  if(state is GameError) {
             //print("State isn't GameLoaded");
             gameplay = state.gameplay;
