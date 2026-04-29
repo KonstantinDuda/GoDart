@@ -52,9 +52,10 @@ class RootPage extends StatelessWidget {
                 winner = "Нічия!";
                 messageColor = Colors.orange;
               //} else if(state.winner.contains("X") || state.winner.contains("O")) {
-              } else if(state.winner.contains("Переможець: ")) {
-                winner = "Переможець: ${state.winner}";
-              } else {
+              } else /*if(state.winner.contains("Переможець: ")) {
+                winner = state.winner;
+              } else */
+              {
                 winner = state.winner;
               }
             }

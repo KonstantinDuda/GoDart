@@ -43,16 +43,17 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           if(data.containsKey("status")) {
             gameplayState = GameplayEnum.playOnline;
             if(data["status"] == "waiting") {
+              localBoard = List<String>.filled(9, "");
             print("Waiting for opponent...");
             //emit(GameLoaded(List.from(localBoard), "Очікування суперника...", gameplayState));
             add(GameUpdateReceived(List.from(localBoard), "Очікування суперника..."));
             //return;
-            } else if(data["status"] == "started") {
+            } else if(data["status"] == "started" || data["status"] == "playing") {
 
               localBoard = List<String>.from(data["board"]);
               currentTurn = data["turn"];
               localTurn = data["symbol"] ?? localTurn;
-              print("Game started! Your symbol: $localTurn");
+              print("Game started or playing! Your symbol: $localTurn");
 
               if(data.containsKey("winner")) {
                 localWinner = data["winner"];
@@ -69,6 +70,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               print('winner != "" && winner != "Draw". localBoard: $localBoard');
               add(GameUpdateReceived(List.from(localBoard), "Ваш символ: $localTurn. Хід: $currentTurn"));
               //return;
+            } else if(data["status"] == "new_game_requested") {
+              print("Opponent requested a new game. Resetting local game state.");
+              // TODO: Викликати випливаюче вікно з запитом на нову гру та підтвердженням, 
+              //якщо клієнт хоче почати нову гру з тим самим суперником
+
+              // localBoard = List<String>.filled(9, "");
+              // localTurn = "X";
+              // localWinner = "";
+              add(GameUpdateReceived(List.from(localBoard), "Суперник запросив нову гру"));
+              return;
             }
           }
         });
@@ -326,9 +337,19 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
   }
 
   _changeGameplay(ChangeGameplay event, Emitter<GameState> emit) /*async*/ {
+// TODO: Наразі якщо клієнт перемикається з онлайн гри на інший режим, 
+//то його локальна гра скидається, але сервер про це не повідомляється і 
+//він залишається в кімнаті, поки не відключиться. Потрібно зробити так, щоб 
+//при перемиканні з онлайн гри клієнт повідомляв сервер про вихід з кімнати, а 
+//при перемиканні на онлайн гру - про підключення до кімнати. 
+//Зараз сервер вважає один клієнт в кімнаті і за гравця О і за Х, якщо той 
+//перемикається з онлайн на офлайн гру і назад  
+
     gameplayState = event.gameplay;
     print("Gameplay changed to: $gameplayState");
     if (gameplayState != GameplayEnum.playOnline) {
+      // TODO: Робити запит чи певен клієнт що хоче покинути онлайн якщо він в 
+      // онлайн грі та повідомляти сервер, якщо кліент покидає кімнату
       localBoard = List<String>.filled(9, "");
       localTurn = "X";
       localWinner = "";

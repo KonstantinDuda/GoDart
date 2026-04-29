@@ -81,15 +81,15 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// func broadcastBoard() {
-// 	mu.Lock()
-// 	currentBoard := board
-// 	mu.Unlock()
+/*func broadcastBoard() {
+	mu.Lock()
+	currentBoard := board
+	mu.Unlock()
 
-// 	broadcast <- currentBoard
-// }
+	broadcast <- currentBoard
+}*/
 
-func broadcastToRoom(room *Room, status string) error {
+/*func broadcastToRoom(room *Room, status string) error {
 	msg := map[string]any{
 		"board":  room.Board,
 		"turn":   room.Turn,
@@ -113,7 +113,7 @@ func broadcastToRoom(room *Room, status string) error {
 		}
 	}
 	return nil
-}
+}*/
 
 func handleMessages(room *Room) {
 	// Коли функція завершується, ми маємо закрити всі сокети в цій кімнаті
@@ -135,7 +135,7 @@ func handleMessages(room *Room) {
 		if i == 1 {
 			symbol = "O"
 		}
-		conn.WriteJSON(map[string]interface{}{
+		conn.WriteJSON(map[string]any{
 			"status": "started",
 			"board":  room.Board,
 			"turn":   room.Turn,
@@ -166,7 +166,34 @@ func handleMessages(room *Room) {
 					return
 				}
 				if idx, ok := msg["index"]; ok {
+					fmt.Printf("Player %s send %d", s, idx)
 					moves <- PlayerMove{Index: int(idx.(float64)), Symbol: s}
+				} else {
+					fmt.Printf("Player %s send msg['index'] != ok \n", s)
+					//var newMsg map[string]any
+					if new, ok := msg["new_game"]; ok {
+						fmt.Printf("Player %s wants new game: %v \n", s, new)
+						index := 0
+						if s == "X" {
+							index = 1
+						}
+						room.Players[index].WriteJSON(map[string]any{
+							"status": "new_game_requested",
+							"board":  room.Board,
+							"turn":   room.Turn,
+							"winner": checkWinner(room.Board),
+						})
+					}
+					// room.Board = [9]string{"", "", "", "", "", "", "", "", ""}
+					// room.Turn = "X"
+					// for _, conn := range room.Players {
+					// 	conn.WriteJSON(map[string]any{
+					// 		"status": "started",
+					// 		"board":  room.Board,
+					// 		"turn":   room.Turn,
+					// 		"symbol": s,
+					// 	})
+					// }
 				}
 			}
 		}(conn, symbol)
@@ -201,6 +228,7 @@ func handleMessages(room *Room) {
 					"winner": checkWinner(room.Board),
 				})
 				if err != nil {
+					fmt.Printf("Помилка відправки оновлення: %v\n", err)
 					return // Якщо не вдалося відправити — завершуємо горутину
 				}
 			}
