@@ -329,51 +329,35 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
     if (gameplayState == GameplayEnum.playOnline) {
       channel.sink.add(jsonEncode({"new_game": 1}));
     } else {
-      localBoard = List<String>.filled(9, "");
-      localTurn = "X";
-      localWinner = "";
+      cleanLocalData();
+      // localBoard = List<String>.filled(9, "");
+      // localTurn = "X";
+      // localWinner = "";
       emit(GameLoaded(List.from(localBoard), "", gameplayState));
     }
   }
 
-  _changeGameplay(ChangeGameplay event, Emitter<GameState> emit) /*async*/ {
-// TODO: Наразі якщо клієнт перемикається з онлайн гри на інший режим, 
-//то його локальна гра скидається, але сервер про це не повідомляється і 
-//він залишається в кімнаті, поки не відключиться. Потрібно зробити так, щоб 
-//при перемиканні з онлайн гри клієнт повідомляв сервер про вихід з кімнати, а 
-//при перемиканні на онлайн гру - про підключення до кімнати. 
-//Зараз сервер вважає один клієнт в кімнаті і за гравця О і за Х, якщо той 
-//перемикається з онлайн на офлайн гру і назад  
-
+  _changeGameplay(ChangeGameplay event, Emitter<GameState> emit) /*async*/ {    
+    var oldGameplay = gameplayState;
     gameplayState = event.gameplay;
     print("Gameplay changed to: $gameplayState");
-    if (gameplayState != GameplayEnum.playOnline) {
-      // TODO: Робити запит чи певен клієнт що хоче покинути онлайн якщо він в 
-      // онлайн грі та повідомляти сервер, якщо кліент покидає кімнату
-      localBoard = List<String>.filled(9, "");
-      localTurn = "X";
-      localWinner = "";
+
+    if (gameplayState != GameplayEnum.playOnline && oldGameplay == GameplayEnum.playOnline) {
+    channel.sink.close();
+    cleanLocalData();
       emit(GameLoaded(List.from(localBoard), "", gameplayState));
-    } else {
+    } else if (gameplayState == GameplayEnum.playOnline && oldGameplay != GameplayEnum.playOnline) {
       add(GameConnectToServer());
-      // try {
-      //   if (channel.closeCode == null) {
-      //     channel.sink.add(jsonEncode({"new_game": 1}));
-      //   } else {
-      //     print("WebSocket channel is not initialized");
-      //     emit(GameError("Помилка з'єднання з сервером", gameplayState));
-      //   }
-      // } on WebSocketChannelException catch (e) {
-      //   print("Socket error: $e");
-      //   emit(
-      //     GameError("Сервер недоступний або порт закритий: $e", gameplayState),
-      //   );
-      // } catch (e) {
-      //   print("Unexpected error: $e");
-      //   emit(GameError("Не вдалося підключитись", gameplayState));
-      //   add(GameUpdateReceived(List.from(localBoard), ""));
-      // }
+    } else {
+      cleanLocalData();
+      emit(GameLoaded(List.from(localBoard), "", gameplayState));
     }
+  }
+
+  cleanLocalData() {
+    localBoard = List<String>.filled(9, "");
+    localTurn = "X";
+    localWinner = "";
   }
 
   @override

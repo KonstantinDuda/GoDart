@@ -22,6 +22,28 @@ class RootPage extends StatelessWidget {
     );
   }
 
+  exitOnlineDialog(BuildContext context) async {
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Вихід з онлайн гри'),
+        content: const Text('Ви впевнені, що хочете вийти з онлайн гри?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Ні'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Так'),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    return shouldExit;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,11 +73,9 @@ class RootPage extends StatelessWidget {
               if(state.winner == "Draw") {
                 winner = "Нічия!";
                 messageColor = Colors.orange;
-              //} else if(state.winner.contains("X") || state.winner.contains("O")) {
-              } else /*if(state.winner.contains("Переможець: ")) {
-                winner = state.winner;
-              } else */
-              {
+              } else if(state.winner == "X" || state.winner == "O") {
+                winner = "Переміг гравець ${state.winner}!";
+              } else {
                 winner = state.winner;
               }
             }
@@ -74,10 +94,19 @@ class RootPage extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       TextButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          if(gameplay == GameplayEnum.playOnline) {
+                            final shouldExit = await exitOnlineDialog(context);
+                            if (shouldExit) {
+                              context.read<GameBloc>().add(
+                                ChangeGameplay(GameplayEnum.twoPlonePC),
+                              );
+                            }
+                          } else {
                           context.read<GameBloc>().add(
                             ChangeGameplay(GameplayEnum.twoPlonePC),
                           );
+                        }
                         },
                         style: TextButton.styleFrom(
                           backgroundColor: gameplay == GameplayEnum.twoPlonePC
@@ -88,10 +117,19 @@ class RootPage extends StatelessWidget {
                         child: const Text("2 гравці на одному пристрої"),
                       ),
                       TextButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          if(gameplay == GameplayEnum.playOnline) {
+                            final shouldExit = await exitOnlineDialog(context);
+                            if (shouldExit) {
+                              context.read<GameBloc>().add(
+                                ChangeGameplay(GameplayEnum.vsAI),
+                              );
+                            }
+                          } else {
                           context.read<GameBloc>().add(
                             ChangeGameplay(GameplayEnum.vsAI),
                           );
+                          }
                         },
                         style: TextButton.styleFrom(
                           backgroundColor: gameplay == GameplayEnum.vsAI
