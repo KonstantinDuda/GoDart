@@ -48,7 +48,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//defer ws.Close()
 	// Ми не закриваємо ws тут через defer, бо він має жити в handleMessages
 
 	roomsMu.Lock()
@@ -58,6 +57,26 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Waiting for an opponent...")
 		ws.WriteJSON(map[string]string{"status": "waiting",
 			"message": "Пошук суперника"})
+
+		// defer func() {
+		// 	fmt.Printf("Закриваємо з'єднання з клієнтом у handleConnections %v\n", ws.RemoteAddr())
+		// 	roomsMu.Lock()
+		// 	if waiting == ws {
+		// 		waiting = nil
+		// 	}
+		// 	roomsMu.Unlock()
+		// 	ws.Close()
+		// }()
+
+		// for {
+		// 	var msg map[string]any
+		// 	if err := ws.ReadJSON(&msg); err != nil {
+		// 		log.Printf("Помилка читання від клієнта: %v \n", err)
+		// 		return
+		// 	} else {
+		// 		log.Printf("handleConnection ReadJSON %v \n", msg)
+		// 	}
+		// }
 	} else {
 		player1 := waiting
 		player2 := ws
@@ -72,8 +91,9 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			Players: []*websocket.Conn{player1, player2},
 			Turn:    "X",
 		}
-		rooms[roomID] = newRoom
+
 		roomsMu.Unlock()
+		rooms[roomID] = newRoom
 
 		go handleMessages(newRoom)
 		//broadcastToRoom(newRoom, "started")
@@ -118,6 +138,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 func handleMessages(room *Room) {
 	// Коли функція завершується, ми маємо закрити всі сокети в цій кімнаті
 	defer func() {
+		fmt.Printf("Кімната %s закрита\n", room.ID)
 		roomsMu.Lock()
 		delete(rooms, room.ID) // Видаляємо кімнату з пам'яті
 		roomsMu.Unlock()
@@ -125,7 +146,7 @@ func handleMessages(room *Room) {
 		for _, p := range room.Players {
 			p.Close()
 		}
-		fmt.Printf("Кімната %s закрита\n", room.ID)
+
 	}()
 
 	// 2. Відправляємо початковий стан обом гравцям
@@ -160,11 +181,11 @@ func handleMessages(room *Room) {
 			for {
 				var msg map[string]any
 				if err := c.ReadJSON(&msg); err != nil {
-					log.Printf("Помилка читання від клієнта: %v", err)
+					log.Printf("Помилка читання від клієнта: %v \n", err)
 					c.Close()
-					room.Players = removePlayer(room.Players, c)
+					room.Players = removePlayer(room, c)
 					return
-				}
+				} // Maybe else need here
 				if idx, ok := msg["index"]; ok {
 					fmt.Printf("Player %s send %d", s, idx)
 					moves <- PlayerMove{Index: int(idx.(float64)), Symbol: s}
@@ -184,16 +205,6 @@ func handleMessages(room *Room) {
 							"winner": checkWinner(room.Board),
 						})
 					}
-					// room.Board = [9]string{"", "", "", "", "", "", "", "", ""}
-					// room.Turn = "X"
-					// for _, conn := range room.Players {
-					// 	conn.WriteJSON(map[string]any{
-					// 		"status": "started",
-					// 		"board":  room.Board,
-					// 		"turn":   room.Turn,
-					// 		"symbol": s,
-					// 	})
-					// }
 				}
 			}
 		}(conn, symbol)
@@ -291,11 +302,27 @@ func checkWinner(board [9]string) string {
 	return ""
 }
 
-func removePlayer(players []*websocket.Conn, player *websocket.Conn) []*websocket.Conn {
+func removePlayer(room *Room, player *websocket.Conn) []*websocket.Conn {
 	newPlayers := []*websocket.Conn{}
-	for _, p := range players {
+	for _, p := range room.Players {
 		if p != player {
 			newPlayers = append(newPlayers, p)
+		}
+	}
+	if len(newPlayers) < 2 {
+		fmt.Println("remove player. newPlayers len < 2")
+		if waiting == nil {
+			waiting = newPlayers[0]
+			fmt.Printf("rooms length before delete == %v \n", len(rooms))
+			roomsMu.Lock()
+			delete(rooms, room.ID)
+			roomsMu.Unlock()
+			fmt.Printf("rooms length after delete == %v \n", len(rooms))
+			waiting.WriteJSON(map[string]string{"status": "waiting",
+				"message": "Пошук суперника"})
+		} else {
+			fmt.Println("remove player. newPlayers len >= 2")
+			newPlayers = append(newPlayers, waiting)
 		}
 	}
 	return newPlayers
