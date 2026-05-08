@@ -75,7 +75,51 @@ class RootPage extends StatelessWidget {
                 messageColor = Colors.orange;
               } else if(state.winner == "X" || state.winner == "O") {
                 winner = "Переміг гравець ${state.winner}!";
-              } else {
+              } else if(state.winner == "new_game_requested") {
+                // winner = "Суперник запросив нову гру!";
+                // messageColor = Colors.blue;
+                // showDialog<bool>(
+                //   context: context,
+                //   builder: (context) => AlertDialog(
+                //     title: const Text('Нова гра'),
+                //     content: const Text('Суперник запросив нову гру. Ви хочете почати?'),
+                //     actions: [
+                //       TextButton(
+                //         onPressed: () => Navigator.of(context).pop(false),
+                //         child: const Text('Ні'),
+                //       ),
+                //       TextButton(
+                //         onPressed: () => Navigator.of(context).pop(true),
+                //         child: const Text('Так'),
+                //       ),
+                //     ],
+                //   ),
+                // ).then((shouldStartNewGame) {
+                //   print("User response to new game request: $shouldStartNewGame");
+                //     context.read<GameBloc>().add(NewGameResponse(shouldStartNewGame ?? false));
+                // });
+                return AlertDialog(
+                  title: const Text('Нова гра'),
+                  content: const Text('Суперник запросив нову гру. Ви хочете почати?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        //Navigator.of(context).pop();
+                        context.read<GameBloc>().add(NewGameResponse(false));
+                      },
+                      child: const Text('Ні'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        //Navigator.of(context).pop();
+                        context.read<GameBloc>().add(NewGameResponse(true));
+                      },
+                      child: const Text('Так'),
+                    ),
+                  ],
+                );
+              }
+              else {
                 winner = state.winner;
               }
             }

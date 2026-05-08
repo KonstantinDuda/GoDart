@@ -21,6 +21,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameUpdateReceived>(_update);
     on<GameCellTapped>(_tap);
     on<NewGameRequested>(_newGame);
+    on<NewGameResponse>(_newGameResponse); // TODO: maybe need to separate event for response, but for now it can be handled in the same method as request, just with different logic inside
     on<ChangeGameplay>(_changeGameplay);
   }
 
@@ -78,7 +79,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               // localBoard = List<String>.filled(9, "");
               // localTurn = "X";
               // localWinner = "";
-              add(GameUpdateReceived(List.from(localBoard), "Суперник запросив нову гру"));
+              add(GameUpdateReceived(List.from(localBoard), "new_game_requested"));
               return;
             }
           }
@@ -335,6 +336,19 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
       // localWinner = "";
       emit(GameLoaded(List.from(localBoard), "", gameplayState));
     }
+  }
+
+  _newGameResponse(NewGameResponse event, Emitter<GameState> emit) /*async*/ {
+      // channel.sink.add(jsonEncode({"new_game_response": event.accepted ? 1 : 0}));
+      print("New game response: ${event.accepted}");
+      if(event.accepted) {
+        channel.sink.add(jsonEncode({"new_game": 2}));
+      } else {
+        channel.sink.add(jsonEncode({"new_game": 0}));
+        cleanLocalData();
+        gameplayState = GameplayEnum.twoPlonePC;
+        emit(GameLoaded(List.from(localBoard), "", gameplayState));
+      }
   }
 
   _changeGameplay(ChangeGameplay event, Emitter<GameState> emit) /*async*/ {    

@@ -33,6 +33,14 @@ class NewGameRequested extends GameEvent {
   List<Object?> get props => [];
 }
 
+class NewGameResponse extends GameEvent {
+  final bool accepted;
+  NewGameResponse(this.accepted);
+  
+   @override
+  List<Object?> get props => [accepted];
+}
+
 class ChangeGameplay extends GameEvent {
   final GameplayEnum gameplay;
   ChangeGameplay(this.gameplay);
