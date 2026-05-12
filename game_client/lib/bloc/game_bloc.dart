@@ -21,7 +21,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameUpdateReceived>(_update);
     on<GameCellTapped>(_tap);
     on<NewGameRequested>(_newGame);
-    on<NewGameResponse>(_newGameResponse); // TODO: maybe need to separate event for response, but for now it can be handled in the same method as request, just with different logic inside
+    on<NewGameResponse>(_newGameResponse);
     on<ChangeGameplay>(_changeGameplay);
   }
 
@@ -44,7 +44,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           if(data.containsKey("status")) {
             gameplayState = GameplayEnum.playOnline;
             if(data["status"] == "waiting") {
-              localBoard = List<String>.filled(9, "");
+              //localBoard = List<String>.filled(9, "");
+              cleanLocalData();
             print("Waiting for opponent...");
             //emit(GameLoaded(List.from(localBoard), "Очікування суперника...", gameplayState));
             add(GameUpdateReceived(List.from(localBoard), "Очікування суперника..."));
@@ -119,12 +120,16 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
     (localBoard[event.index] != "" || localWinner != "")) {
       print("Cell already occupied or game over");
       return;
+    } if(gameplayState == GameplayEnum.playOnline && localWinner != "") {
+      print("Game over. Winner: $localWinner");
+      add(GameUpdateReceived(List.from(localBoard), "Гра завершена! Ваш символ: $localTurn. Переможець: $localWinner"));
+      return;
     } else if (gameplayState == GameplayEnum.playOnline && currentTurn != localTurn) {
       print("It's not your turn. Current turn: $currentTurn, your symbol: $localTurn");
       add(GameUpdateReceived(List.from(localBoard), "Очікування ходу суперника..."));
       return;
     } else if(gameplayState == GameplayEnum.playOnline && currentTurn == localTurn) {
-      channel.sink.add(jsonEncode({"index": event.index}));
+      channel.sink.add(jsonEncode({"index": event.index, "symbol": localTurn}));
       print("Sent move to server: ${event.index}");
       return;
     }
@@ -215,7 +220,7 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
     }
 
     if (gameplayState == GameplayEnum.playOnline) {
-      final map = jsonEncode({"index": event.index});
+      final map = jsonEncode({"index": event.index, "symbol": localTurn});
       channel.sink.add(map);
     } else if (gameplayState == GameplayEnum.twoPlonePC) {
       // print("Tapped cell index: ${event.index}, current turn: $localTurn");
@@ -357,7 +362,7 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
     print("Gameplay changed to: $gameplayState");
 
     if (gameplayState != GameplayEnum.playOnline && oldGameplay == GameplayEnum.playOnline) {
-    channel.sink.close();
+    channel.sink.add(jsonEncode({"status": "leave"}));
     cleanLocalData();
       emit(GameLoaded(List.from(localBoard), "", gameplayState));
     } else if (gameplayState == GameplayEnum.playOnline && oldGameplay != GameplayEnum.playOnline) {

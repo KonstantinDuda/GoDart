@@ -52,7 +52,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Waiting for an opponent...")
 		ws.WriteJSON(map[string]string{"status": "waiting",
 			"message": "Пошук суперника"})
-
 	} else {
 		player1 := waiting
 		player2 := ws
@@ -88,7 +87,6 @@ func handleMessages(room *Room) {
 		for _, p := range room.Players {
 			p.Close()
 		}
-
 	}()
 
 	// 2. Відправляємо початковий стан обом гравцям
@@ -129,47 +127,65 @@ func handleMessages(room *Room) {
 					return
 				}
 				if idx, ok := msg["index"]; ok {
-					fmt.Printf("Player %s send %d", s, idx)
-					moves <- PlayerMove{Index: int(idx.(float64)), Symbol: s}
+					//fmt.Printf("Player %s send %d", s, idx)
+					player := msg["symbol"]
+					//moves <- PlayerMove{Index: int(idx.(float64)), Symbol: s}
+					moves <- PlayerMove{Index: int(idx.(float64)), Symbol: player.(string)}
 				} else {
 					fmt.Printf("Player %s send msg['index'] != ok \n", s)
 					//var newMsg map[string]any
 					if new, ok := msg["new_game"]; ok {
 						fmt.Printf("Player %s wants new game: %v \n", s, new)
-						// if new == 1 {
-						index := 0
-						if s == "X" {
-							index = 1
-						}
+						newInt := int(new.(float64))
 
-						winner := checkWinner(room.Board, room)
-						room.Players[index].WriteJSON(map[string]any{
-							"status": "new_game_requested",
-							"board":  room.Board,
-							"turn":   room.Turn,
-							"winner": winner, // checkWinner(room.Board),
-						})
-						// } else if new == 2 {
-						// 	fmt.Printf("Player %s agrees to new game: %v \n", s, new)
-						// 	room.Board = [9]string{"", "", "", "", "", "", "", "", ""}
-						// 	room.Turn = "X"
-						// 	for _, conn := range room.Players {
-						// 		conn.WriteJSON(map[string]any{
-						// 			"status": "started",
-						// 			"board":  room.Board,
-						// 			"turn":   room.Turn,
-						// 			"winner": checkWinner(room.Board),
-						// 		})
-						// 	}
-						// } else if new == 0 {
-						// 	fmt.Printf("Player %s refuses new game: %v \n", s, new)
-						// 	index := 0
-						// 	if s == "O" {
-						// 		index = 1
-						// 	}
-						// 	c.Close()
-						// 	room.Players = removePlayer(room, room.Players[index])
-						// }
+						switch newInt {
+						case 1:
+							index := 0
+							if s == "X" {
+								index = 1
+							}
+							fmt.Printf("Player %s wants new game: %v \n", s, new)
+							//winner := checkWinner(room.Board, room)
+							room.Players[index].WriteJSON(map[string]any{
+								"status": "new_game_requested",
+								"board":  room.Board,
+								"turn":   room.Turn,
+								"winner": room.Winner, // checkWinner(room.Board),
+							})
+						case 2:
+							fmt.Printf("Player %s agrees to new game: %v \n", s, new)
+							room.Board = [9]string{"", "", "", "", "", "", "", "", ""}
+							room.Turn = "X"
+							room.Winner = ""
+							for _, conn := range room.Players {
+								conn.WriteJSON(map[string]any{
+									"status": "started",
+									"board":  room.Board,
+									"turn":   room.Turn,
+									"winner": room.Winner, // checkWinner(room.Board, room),
+								})
+							}
+						case 0:
+							fmt.Printf("Player %s refuses new game: %v \n", s, new)
+							index := 0
+							if s == "O" {
+								index = 1
+							}
+							c.Close()
+							room.Players = removePlayer(room, room.Players[index])
+						}
+					}
+					if leave, ok := msg["status"]; ok {
+						if leave == "leave" {
+							fmt.Printf("Player %s wants to leave room \n", s)
+							index := 0
+							if s == "O" {
+								index = 1
+							}
+							c.Close()
+							room.Players = removePlayer(room, room.Players[index])
+							return
+						}
 					}
 				}
 			}
@@ -179,9 +195,10 @@ func handleMessages(room *Room) {
 	// 4. Основний цикл гри (обробка черги)
 	for {
 		move := <-moves // Чекаємо на хід від будь-кого
-		fmt.Printf("Отримано хід: %s на позицію %d\n", move.Symbol, move.Index)
+		fmt.Printf("Отримано хід: %s на позицію %d, Черга: %s\n", move.Symbol, move.Index, room.Turn)
 		// Перевірка: чи зараз хід цього гравця?
 		if move.Symbol != room.Turn {
+			fmt.Printf("Невірний хід від %s. Очікується %s\n", move.Symbol, room.Turn)
 			continue
 		}
 
@@ -196,7 +213,7 @@ func handleMessages(room *Room) {
 				room.Turn = "X"
 			}
 
-			winner := checkWinner(room.Board, room)
+			room.Winner = checkWinner(room.Board, room)
 
 			// Відправка оновлення обом
 			for _, conn := range room.Players {
@@ -204,7 +221,7 @@ func handleMessages(room *Room) {
 					"status": "playing",
 					"board":  room.Board,
 					"turn":   room.Turn,
-					"winner": winner, // checkWinner(room.Board),
+					"winner": room.Winner, // checkWinner(room.Board, room),
 				})
 				if err != nil {
 					fmt.Printf("Помилка відправки оновлення: %v\n", err)
@@ -273,26 +290,36 @@ func checkWinner(board [9]string, room *Room) string {
 
 func removePlayer(room *Room, wrongPlayer *websocket.Conn) []*websocket.Conn {
 	newPlayers := []*websocket.Conn{}
+	room.Turn = "X"
+
 	for _, p := range room.Players {
 		if p != wrongPlayer {
 			newPlayers = append(newPlayers, p)
 		}
 	}
-	if len(newPlayers) < 2 {
-		fmt.Println("remove player. newPlayers len < 2")
+
+	fmt.Printf("removePlayer. newPlayers len == %v \n", len(newPlayers))
+	if len(newPlayers) == 1 {
+		//fmt.Println("remove player. newPlayers len < 2")
 		if waiting == nil {
 			waiting = newPlayers[0]
-			fmt.Printf("rooms length before delete == %v \n", len(rooms))
+			//fmt.Printf("rooms length before delete == %v \n", len(rooms))
 			roomsMu.Lock()
 			delete(rooms, room.ID)
 			roomsMu.Unlock()
-			fmt.Printf("rooms length after delete == %v \n", len(rooms))
+			//fmt.Printf("rooms length after delete == %v \n", len(rooms))
 			waiting.WriteJSON(map[string]string{"status": "waiting",
 				"message": "Пошук суперника"})
 		} else {
-			fmt.Println("remove player. newPlayers len >= 2")
+			fmt.Println("remove player. waiting != nil")
 			newPlayers = append(newPlayers, waiting)
 		}
+	} else if len(newPlayers) == 0 {
+		fmt.Println("remove player. newPlayers len == 0")
+		roomsMu.Lock()
+		delete(rooms, room.ID)
+		roomsMu.Unlock()
 	}
+
 	return newPlayers
 }
