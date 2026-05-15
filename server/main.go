@@ -5,11 +5,292 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"sync"
+
+	//"sync"
 
 	"github.com/gorilla/websocket"
 )
 
+var (
+	upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true }, // Дозволяємо всі підключення
+	}
+	//clients = make(map[string]*Client)
+	clients       = []*Client{}
+	rooms         = make(map[string]*Room)
+	joinQueue     = make(chan *Client)
+	waitingClient *Client
+)
+
+type Client struct {
+	ID      int
+	Conn    *websocket.Conn
+	read    chan map[string]any
+	write   chan map[string]any
+	isAlive bool
+}
+
+type Room struct {
+	//ID      string
+	ID      int
+	Board   [9]string
+	Players []*Client
+	Turn    string
+	Winner  string
+}
+
+func main() {
+
+	go matchmaker()
+
+	http.HandleFunc("/ws", handleConnections)
+
+	fmt.Println("WebSocket сервер запущено на :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func handleConnections(w http.ResponseWriter, r *http.Request) {
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	index := len(clients)
+	var clientID int
+	if index == 0 {
+		clientID = 0
+		fmt.Printf("Перший клієнт підключився. ID: %d \n", index)
+	} else {
+		clientID = clients[len(clients)-1].ID + 1
+		fmt.Printf("Новий клієнт підключився. ID: %d.\n", index)
+	}
+
+	fmt.Printf("len(clients) %d. new ID: %d\n", len(clients), clientID)
+	client := &Client{
+		ID:      clientID,
+		Conn:    ws,
+		read:    make(chan map[string]any),
+		write:   make(chan map[string]any),
+		isAlive: true,
+	}
+
+	clients = append(clients, client)
+	go client.listen()
+	go client.writePump()
+
+	//client.write <- map[string]any{"status": "waiting", "message": "Пошук суперника"}
+
+	joinQueue <- client
+}
+
+func (c *Client) listen() {
+	// TODO: Коли клієнт відключається, потрібно перевіряти чи він вже в кімнаті
+	// Якщо так, то видаляти його з кімнати та робити суперника очікуючим, або
+	// приєднувати його до очікуючого
+	defer func() {
+		c.isAlive = false
+		c.Conn.Close()
+		close(c.read)
+		close(c.write)
+		for index := range clients {
+			if clients[index].ID == c.ID {
+				clients = append(clients[:index], clients[index+1:]...)
+				fmt.Printf("Клієнт %d видалений з масиву клієнтів. Кількість клієнтів: %d\n", c.ID, len(clients))
+				if waitingClient != nil && waitingClient.ID == c.ID {
+					waitingClient = nil
+					fmt.Printf("Очікуючий клієнт %d видалений \n", c.ID)
+				}
+				break
+			} else {
+				fmt.Printf("Гравець %d не знайдений для видалення \n", clients[index].ID)
+			}
+		}
+	}()
+
+	for {
+		var msg map[string]any
+		if err := c.Conn.ReadJSON(&msg); err != nil {
+			log.Printf("Помилка читання від клієнта %d: %v \n", c.ID, err)
+			return
+		}
+		if leave, ok := msg["status"]; ok {
+			if leave == "leave" {
+				log.Printf("Гравець %d вийшов з очікування \n", c.ID)
+				return
+			}
+		}
+		if len(msg) > 0 {
+			fmt.Printf("Отримано повідомлення від %d: %v \n", c.ID, msg)
+			c.read <- msg
+		}
+
+	}
+}
+
+func (c *Client) writePump() {
+	for msg := range c.write {
+		if err := c.Conn.WriteJSON(msg); err != nil {
+			log.Printf("Помилка відправки повідомлення клієнту %d: %v \n", c.ID, err)
+			return
+		} else {
+			fmt.Printf("Відправлено повідомлення клієнту %d: %v \n", c.ID, msg)
+		}
+	}
+}
+
+func matchmaker() {
+	for {
+		newClient := <-joinQueue
+
+		if waitingClient == nil {
+			waitingClient = newClient
+			fmt.Printf("Клієнт %d очікує на пару \n", waitingClient.ID)
+
+			newClient.write <- map[string]any{"status": "waiting", "message": "Пошук суперника"}
+
+		} else {
+			player1 := waitingClient
+			player2 := newClient
+			waitingClient = nil
+
+			log.Printf("Пара створена. Гравець 1: %d, Гравець 2: %d \n", player1.ID, player2.ID)
+			roomID := len(rooms) + 1 //fmt.Sprintf("room-%d", len(rooms)+1)
+			newRoom := &Room{
+				ID:      roomID,
+				Board:   [9]string{"", "", "", "", "", "", "", "", ""},
+				Players: []*Client{player1, player2},
+				Turn:    "X",
+				Winner:  "",
+			}
+			idString := fmt.Sprintf("client-%d", player1.ID)
+			rooms[idString] = newRoom
+
+			go handleMessages(newRoom)
+
+			player1.write <- map[string]any{
+				"status": "started",
+				"board":  newRoom.Board,
+				"turn":   newRoom.Turn,
+				"symbol": "X"}
+			player2.write <- map[string]any{
+				"status": "started",
+				"board":  newRoom.Board,
+				"turn":   newRoom.Turn,
+				"symbol": "O"}
+		}
+		//if len(clients) >= 2 {
+		// var player1, player2 *Client
+		// for _, client := range clients {
+		// 	if player1 == nil {
+		// 		player1 = client
+		// 		//client.write <- map[string]any{"status": "waiting", "message": "Пошук суперника"}
+		// 	} else if client != player1 {
+		// 		player2 = client
+		// 		//client.write <- map[string]any{"status": "waiting", "message": "Пошук суперника"}
+		// 		break
+		// 	}
+		// }
+
+		// if player1 != nil && player2 != nil {
+		// 	fmt.Printf("Пара створена. Гравець 1: %d, Гравець 2: %d \n", player1.ID, player2.ID)
+		// 	roomID := len(rooms) + 1 //fmt.Sprintf("room-%d", len(rooms)+1)
+		// 	newRoom := &Room{
+		// 		ID:      roomID,
+		// 		Board:   [9]string{"", "", "", "", "", "", "", "", ""},
+		// 		Players: []*Client{player1, player2},
+		// 		Turn:    "X",
+		// 		Winner:  "",
+		// 	}
+		// 	idString := fmt.Sprintf("client-%d", player1.ID)
+		// 	rooms[idString] = newRoom
+
+		// 	go handleMessages(newRoom)
+		// }
+		//}
+	}
+}
+
+func handleMessages(room *Room) {
+	// Логіка гри, обробка ходів, відправка оновлень гравцям
+	// Ця функція буде слухати канали обох гравців та оновлювати стан гри відповідно до отриманих повідомлень
+	for {
+		select {
+		case msg1, ok := <-room.Players[0].read:
+			if !ok {
+				fmt.Printf("Гравець 1 вийшов з гри \n")
+				return
+			}
+			fmt.Printf("Отримано повідомлення від гравця 1: %v \n", msg1)
+			// Обробка повідомлення від гравця 1
+		case msg2, ok := <-room.Players[1].read:
+			if !ok {
+				fmt.Printf("Гравець 2 вийшов з гри \n")
+				return
+			}
+			fmt.Printf("Отримано повідомлення від гравця 2: %v \n", msg2)
+			// Обробка повідомлення від гравця 2
+		}
+	}
+}
+
+// Cheking the winner
+var winPatterns = [8][3]int{
+	{0, 1, 2}, {3, 4, 5}, {6, 7, 8},
+	{0, 3, 6}, {1, 4, 7}, {2, 5, 8},
+	{0, 4, 8}, {2, 4, 6},
+}
+
+func checkWinner(board [9]string, room *Room) string {
+	for _, pattern := range winPatterns {
+		if board[pattern[0]] != "" &&
+			board[pattern[0]] == board[pattern[1]] &&
+			board[pattern[1]] == board[pattern[2]] {
+			room.Winner = board[pattern[0]]
+			return board[pattern[0]]
+		}
+	}
+
+	isFull := true
+	for _, cell := range board {
+		if cell == "" {
+			isFull = false
+			break
+		}
+	}
+
+	if isFull {
+		return "Draw"
+	}
+
+	canAnyoneWin := false
+	for _, pattern := range winPatterns {
+		hasX := false
+		hasO := false
+		for _, idx := range pattern {
+			if board[idx] == "X" {
+				hasX = true
+			}
+			if board[idx] == "O" {
+				hasO = true
+			}
+		}
+		if !(hasX && hasO) {
+			canAnyoneWin = true
+			break
+		} else {
+			canAnyoneWin = false
+		}
+	}
+
+	if !canAnyoneWin {
+		return "Draw"
+	}
+
+	return ""
+}
+
+/*
 type Room struct {
 	ID      string
 	Board   [9]string
@@ -23,8 +304,11 @@ var (
 		CheckOrigin: func(r *http.Request) bool { return true }, // Дозволяємо всі підключення
 	}
 	rooms   = make(map[string]*Room)
-	waiting *websocket.Conn
 	roomsMu sync.Mutex
+
+	roomReady = make(chan bool)
+	waiting   *websocket.Conn
+	waitingMu sync.Mutex
 )
 
 func main() {
@@ -45,19 +329,67 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 	// Ми не закриваємо ws тут через defer, бо він має жити в handleMessages
 
+	waitingMu.Lock()
 	roomsMu.Lock()
 	if waiting == nil {
 		waiting = ws
 		roomsMu.Unlock()
+		waitingMu.Unlock()
 		fmt.Println("Waiting for an opponent...")
 		ws.WriteJSON(map[string]string{"status": "waiting",
 			"message": "Пошук суперника"})
+
+		// Chanal для слухання очікуючого гравця, просто цикл не переривався навіть якщо спеціальна змінна ставала false
+		done := make(chan bool)
+		go func() {
+			for {
+				var msg map[string]any
+				if err := ws.ReadJSON(&msg); err != nil {
+					log.Printf("Помилка читання від клієнта: %v \n", err)
+					waitingMu.Lock()
+					if waiting == ws {
+						waiting = nil
+						done <- true
+					}
+					waitingMu.Unlock()
+
+					return
+				}
+				if leave, ok := msg["status"]; ok {
+					if leave == "leave" {
+						log.Printf("Гравець вийшов з очікування \n")
+						waitingMu.Lock()
+						if waiting == ws {
+							waiting = nil
+							done <- true
+						}
+						waitingMu.Unlock()
+						return
+					}
+				}
+				// waitingMu.Unlock()
+				fmt.Printf("Очікуючий гравець відправив повідомлення: %v \n", msg)
+			}
+
+		}()
+
+		select {
+		case <-done:
+			fmt.Println("Гравець вийшов з очікування")
+			ws.Close()
+			return
+		case <-roomReady:
+			fmt.Println("Гравець знайшов пару, вихід з очікування")
+			//return
+		}
 	} else {
 		player1 := waiting
 		player2 := ws
 		waiting = nil
+		waitingMu.Unlock()
 
 		fmt.Println("Пара знайдена! Створюємо кімнату.")
+		roomReady <- true // Сигналізуємо горутині очікування, що пара знайдена
 
 		roomID := fmt.Sprintf("room-%d", len(rooms)+1)
 		newRoom := &Room{
@@ -232,62 +564,6 @@ func handleMessages(room *Room) {
 	}
 }
 
-// Cheking the winner
-var winPatterns = [8][3]int{
-	{0, 1, 2}, {3, 4, 5}, {6, 7, 8},
-	{0, 3, 6}, {1, 4, 7}, {2, 5, 8},
-	{0, 4, 8}, {2, 4, 6},
-}
-
-func checkWinner(board [9]string, room *Room) string {
-	for _, pattern := range winPatterns {
-		if board[pattern[0]] != "" &&
-			board[pattern[0]] == board[pattern[1]] &&
-			board[pattern[1]] == board[pattern[2]] {
-			room.Winner = board[pattern[0]]
-			return board[pattern[0]]
-		}
-	}
-
-	isFull := true
-	for _, cell := range board {
-		if cell == "" {
-			isFull = false
-			break
-		}
-	}
-
-	if isFull {
-		return "Draw"
-	}
-
-	canAnyoneWin := false
-	for _, pattern := range winPatterns {
-		hasX := false
-		hasO := false
-		for _, idx := range pattern {
-			if board[idx] == "X" {
-				hasX = true
-			}
-			if board[idx] == "O" {
-				hasO = true
-			}
-		}
-		if !(hasX && hasO) {
-			canAnyoneWin = true
-			break
-		} else {
-			canAnyoneWin = false
-		}
-	}
-
-	if !canAnyoneWin {
-		return "Draw"
-	}
-
-	return ""
-}
-
 func removePlayer(room *Room, wrongPlayer *websocket.Conn) []*websocket.Conn {
 	newPlayers := []*websocket.Conn{}
 	room.Turn = "X"
@@ -323,3 +599,4 @@ func removePlayer(room *Room, wrongPlayer *websocket.Conn) []*websocket.Conn {
 
 	return newPlayers
 }
+*/

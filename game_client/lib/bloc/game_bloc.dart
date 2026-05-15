@@ -85,16 +85,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             }
           }
         });
-
-        // if (channel.closeCode == null) {
-        //   channel.sink.add(jsonEncode({"new_game": 1}));
-        // } else {
-        //   print("WebSocket channel is not initialized");
-        //   emit(GameError("Помилка з'єднання з сервером", gameplayState));
-        // }
-      // } on TimeoutException {
-      //   print("Connection timeout");
-      //   emit(GameError("Не вдалося підключитись: таймаут", gameplayState));
       } on WebSocketChannelException catch (e) {
         print("Socket error: $e");
         emit(
@@ -229,22 +219,6 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
         return;
       } else {
         localBoard[event.index] = localTurn;
-        /*var winner = checkWinner();
-        if (winner != "") {
-          // print("Winner: $winner");
-          emit(GameLoaded(localBoard, winner, gameplayState));
-        } else {
-          // print("No winner yet");
-          var check = checkDraw();
-          if (check == "Draw") {
-            print("It's a draw!");
-            emit(GameLoaded(List.from(localBoard), "Draw", gameplayState));
-          } else {
-            // print("Switching turn");
-            localTurn = localTurn == "X" ? "O" : "X";
-            emit(GameLoaded(List.from(localBoard), "", gameplayState));
-          }
-        }*/
         winnerDrawCheck(true);
       }
     } else {
