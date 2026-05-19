@@ -25,11 +25,11 @@ var (
 )
 
 type Client struct {
-	ID      int
-	Conn    *websocket.Conn
-	read    chan map[string]any
-	write   chan map[string]any
-	isAlive bool
+	ID    int
+	Conn  *websocket.Conn
+	read  chan map[string]any
+	write chan map[string]any
+	//inRoom bool
 }
 
 type Room struct {
@@ -69,11 +69,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("len(clients) %d. new ID: %d\n", len(clients), clientID)
 	client := &Client{
-		ID:      clientID,
-		Conn:    ws,
-		read:    make(chan map[string]any),
-		write:   make(chan map[string]any),
-		isAlive: true,
+		ID:    clientID,
+		Conn:  ws,
+		read:  make(chan map[string]any),
+		write: make(chan map[string]any),
+		//inRoom: false,
 	}
 
 	clients = append(clients, client)
@@ -90,11 +90,11 @@ func (c *Client) listen() {
 		fmt.Printf("Клієнт %d відключився. Видаляємо з кімнати та масиву клієнтів. \n", c.ID)
 		// TODO: Коли клієнт просто закритий, сервер крашиться.
 		// Потрібно додати перевірку на nil для кімнати та клієнта, щоб уникнути цього.
-		if len(rooms) > 0 {
-			removePlayerFromRoom(rooms[fmt.Sprintf("client-%d", c.ID)], c)
-		} else {
-			deletePlayer(c)
-		}
+		//if c.inRoom {
+		removePlayerFromRoom( /*rooms[fmt.Sprintf("client-%d", c.ID)],*/ c)
+		// } else {
+		// 	deletePlayer(c)
+		// }
 	}()
 
 	for {
@@ -150,9 +150,11 @@ func matchmaker() {
 			player1 := waitingClient
 			player2 := newClient
 			waitingClient = nil
+			// player1.inRoom = true
+			// player2.inRoom = true
 
 			log.Printf("Пара створена. Гравець 1: %d, Гравець 2: %d \n", player1.ID, player2.ID)
-			roomID := len(rooms) + 1 //fmt.Sprintf("room-%d", len(rooms)+1)
+			roomID := len(rooms) + 1 // fmt.Sprintf("room-%d", len(rooms)+1)
 			newRoom := &Room{
 				ID:      roomID,
 				Board:   [9]string{"", "", "", "", "", "", "", "", ""},
@@ -303,13 +305,26 @@ func playerMove(room *Room, msg map[string]any /*index int, */, player string) {
 	}
 }
 
-func removePlayerFromRoom(room *Room, wrongPlayer *Client) []*Client {
+func removePlayerFromRoom( /*room *Room, */ wrongPlayer *Client) []*Client {
 	newPlayers := []*Client{}
-	room.Turn = "X"
+	//room.Turn = "X"
+	var room *Room
+	for _, r := range rooms {
+		for _, p := range r.Players {
+			if p.ID == wrongPlayer.ID {
+				room = r
+				break
+			}
+		}
+		if room != nil {
+			break
+		}
+	}
 
 	if room != nil {
 		for _, p := range room.Players {
 			if p != wrongPlayer {
+				//p.inRoom = false
 				newPlayers = append(newPlayers, p)
 			} else {
 				deletePlayer(p)
@@ -327,9 +342,7 @@ func removePlayerFromRoom(room *Room, wrongPlayer *Client) []*Client {
 		roomsMu.Unlock()
 	} else if len(newPlayers) == 0 {
 		fmt.Println("remove player. newPlayers len == 0")
-		roomsMu.Lock()
-		delete(rooms, fmt.Sprintf("client-%d", room.Players[0].ID))
-		roomsMu.Unlock()
+		joinQueue <- nil
 	}
 
 	return newPlayers
