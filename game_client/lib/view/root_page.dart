@@ -3,8 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/event_state/game_es.dart';
 import '../bloc/game_bloc.dart';
-//import '../bloc/event_state/gameplay_es.dart';
-//import '../bloc/gameplay_bloc.dart';
 
 class RootPage extends StatelessWidget {
   const RootPage({super.key});
@@ -76,28 +74,6 @@ class RootPage extends StatelessWidget {
               } else if(state.winner == "X" || state.winner == "O") {
                 winner = "Переміг гравець ${state.winner}!";
               } else if(state.winner == "new_game_requested") {
-                // winner = "Суперник запросив нову гру!";
-                // messageColor = Colors.blue;
-                // showDialog<bool>(
-                //   context: context,
-                //   builder: (context) => AlertDialog(
-                //     title: const Text('Нова гра'),
-                //     content: const Text('Суперник запросив нову гру. Ви хочете почати?'),
-                //     actions: [
-                //       TextButton(
-                //         onPressed: () => Navigator.of(context).pop(false),
-                //         child: const Text('Ні'),
-                //       ),
-                //       TextButton(
-                //         onPressed: () => Navigator.of(context).pop(true),
-                //         child: const Text('Так'),
-                //       ),
-                //     ],
-                //   ),
-                // ).then((shouldStartNewGame) {
-                //   print("User response to new game request: $shouldStartNewGame");
-                //     context.read<GameBloc>().add(NewGameResponse(shouldStartNewGame ?? false));
-                // });
                 return AlertDialog(
                   title: const Text('Нова гра'),
                   content: const Text('Суперник запросив нову гру. Ви хочете почати?'),
@@ -130,8 +106,6 @@ class RootPage extends StatelessWidget {
             messageColor = Colors.red;
             print(winner);
           }
-          // return BlocBuilder<GameplayBloc, GameplayState>(
-          //   builder: (context, gameplayState) {
               return Row(
                 children: [
                   Column(
@@ -209,10 +183,8 @@ class RootPage extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[
-                        //const Text('Push the button to play:'),
                         SizedBox(
                           height: 30,
-                          // width: 200,
                           child: Text(
                             winner,
                             textAlign: TextAlign.center,
