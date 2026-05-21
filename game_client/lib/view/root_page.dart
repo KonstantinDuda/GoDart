@@ -1,8 +1,110 @@
+import 'package:flame/events.dart';
+import 'package:flame/flame.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:flame/game.dart';
+import 'package:flame/components.dart';
+import 'package:flame/input.dart';
+import 'package:flame_bloc/flame_bloc.dart';
+
 import '../bloc/event_state/game_es.dart';
 import '../bloc/game_bloc.dart';
+
+/*// ==========================================
+// 1. СТАН ТА БЛОК (BLOC) НА МАЙБУТНЄ
+// ==========================================
+
+// Базовий стан нашої гри (поки що порожній)
+class GameState {
+  const GameState();
+}
+
+// Простий Кубіт (полегшена версія Блоку), який керуватиме станом
+class GameCubit extends Cubit<GameState> {
+  GameCubit() : super(const GameState());
+}
+
+// ==========================================
+// 2. ТОЧКА ВХОДУ FLUTTER
+// ==========================================
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        // Загортаємо все в BlocProvider, щоб наш Кубіт був доступний усім
+        body: BlocProvider(
+          create: (context) => GameCubit(),
+          child: Builder(
+            builder: (context) {
+              // GameWidget — це міст, який відображає гру Flame як звичайний віджет Flutter
+              return GameWidget(
+                game: MyTicTacToeGame(
+                  // Передаємо створений кубіт безпосередньо в конструктор гри
+                  gameCubit: BlocProvider.of<GameCubit>(context),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 3. ІГРОВИЙ РУШІЙ FLAME
+// ==========================================
+
+class MyTicTacToeGame extends FlameGame {
+  final GameCubit gameCubit;
+
+  // Конструктор гри
+  MyTicTacToeGame({required this.gameCubit});
+
+  // Метод onLoad викликається ОДИН раз, коли гра ініціалізується.
+  // Тут ми налаштовуємо компоненти та провайдери.
+  @override
+  Future<void> onLoad() async {
+    super.onLoad();
+
+    // Додаємо FlameBlocProvider. Він робить наш BLoC доступним
+    // для ігрових компонентів, які ми додаватимемо пізніше.
+    await add(
+      FlameBlocProvider<GameCubit, GameState>.value(
+        value: gameCubit,
+        children: [
+          // Наразі тут немає дочірніх ігрових компонентів,
+          // тому що ми створюємо просто порожній екран із фоном.
+        ],
+      ),
+    );
+  }
+
+  // Метод render викликається постійно (кожен кадр гри).
+  // Він відповідає за малювання всього, що ми бачимо на екрані.
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+
+    // Створюємо інструмент для малювання (фарбу)
+    final backgroundPaint = Paint()
+      ..color = const Color(0xFF1A1C29); // Гарний темно-синій "космічний" колір
+
+    // Малюємо прямокутник розміром на весь екран гри
+    // size — це вбудована змінна Flame, яка знає точні розміри екрана пристрою
+    canvas.drawRect(size.toRect(), backgroundPaint);
+  }
+}*/
 
 class RootPage extends StatelessWidget {
   const RootPage({super.key});
