@@ -1,11 +1,8 @@
-import 'package:flame/events.dart';
-import 'package:flame/flame.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:flame/game.dart';
 import 'package:flame/components.dart';
-import 'package:flame/input.dart';
 import 'package:flame_bloc/flame_bloc.dart';
 
 import '../bloc/event_state/game_es.dart';
@@ -83,7 +80,7 @@ class MyTicTacToeGame extends FlameGame {
       FlameBlocProvider<GameCubit, GameState>.value(
         value: gameCubit,
         children: [
-          // Наразі тут немає дочірніх ігрових компонентів,
+          // Наразі тут немає дочірніх ігрових компонентів, 
           // тому що ми створюємо просто порожній екран із фоном.
         ],
       ),
