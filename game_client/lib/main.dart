@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:flame/game.dart';
+
 import 'bloc/event_state/game_es.dart';
 //import 'bloc/gameplay_bloc.dart';
 import 'bloc/provider_bloc.dart';
@@ -31,7 +33,14 @@ class MyApp extends StatelessWidget {
           BlocProvider(create: (_) => GameBloc()..add(GameConnectToServer())),
           //BlocProvider(create: (_) => GameplayBloc()),
         ],
-        child: const RootPage(),
+        //child: const RootPage(),
+        child: Builder(
+          builder: (context) {
+            return GameWidget(
+              game: RootPage(gameBloc: BlocProvider.of<GameBloc>(context)),
+            );
+          },
+        ),
       ),
     );
   }

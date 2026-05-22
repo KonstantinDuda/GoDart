@@ -1,5 +1,9 @@
+import 'dart:math';
+
+import 'package:flame/events.dart';
+import 'package:flame/flame.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+//import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:flame/game.dart';
 import 'package:flame/components.dart';
@@ -8,65 +12,14 @@ import 'package:flame_bloc/flame_bloc.dart';
 import '../bloc/event_state/game_es.dart';
 import '../bloc/game_bloc.dart';
 
-/*// ==========================================
-// 1. СТАН ТА БЛОК (BLOC) НА МАЙБУТНЄ
-// ==========================================
-
-// Базовий стан нашої гри (поки що порожній)
-class GameState {
-  const GameState();
-}
-
-// Простий Кубіт (полегшена версія Блоку), який керуватиме станом
-class GameCubit extends Cubit<GameState> {
-  GameCubit() : super(const GameState());
-}
-
-// ==========================================
-// 2. ТОЧКА ВХОДУ FLUTTER
-// ==========================================
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        // Загортаємо все в BlocProvider, щоб наш Кубіт був доступний усім
-        body: BlocProvider(
-          create: (context) => GameCubit(),
-          child: Builder(
-            builder: (context) {
-              // GameWidget — це міст, який відображає гру Flame як звичайний віджет Flutter
-              return GameWidget(
-                game: MyTicTacToeGame(
-                  // Передаємо створений кубіт безпосередньо в конструктор гри
-                  gameCubit: BlocProvider.of<GameCubit>(context),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ==========================================
 // 3. ІГРОВИЙ РУШІЙ FLAME
 // ==========================================
 
-class MyTicTacToeGame extends FlameGame {
-  final GameCubit gameCubit;
-
+class RootPage extends FlameGame {
+  final GameBloc gameBloc;
   // Конструктор гри
-  MyTicTacToeGame({required this.gameCubit});
+  RootPage({required this.gameBloc});
 
   // Метод onLoad викликається ОДИН раз, коли гра ініціалізується.
   // Тут ми налаштовуємо компоненти та провайдери.
@@ -77,33 +30,123 @@ class MyTicTacToeGame extends FlameGame {
     // Додаємо FlameBlocProvider. Він робить наш BLoC доступним
     // для ігрових компонентів, які ми додаватимемо пізніше.
     await add(
-      FlameBlocProvider<GameCubit, GameState>.value(
-        value: gameCubit,
+      FlameBlocProvider<GameBloc, GameState>.value(
+        value: gameBloc,
         children: [
-          // Наразі тут немає дочірніх ігрових компонентів, 
+          // Наразі тут немає дочірніх ігрових компонентів,
           // тому що ми створюємо просто порожній екран із фоном.
+          BoardComponent(),
         ],
       ),
     );
   }
 
-  // Метод render викликається постійно (кожен кадр гри).
-  // Він відповідає за малювання всього, що ми бачимо на екрані.
+  @override
+  Color backgroundColor() => const Color.fromARGB(255, 26, 28, 41); // Білий фон для гри
+}
+
+class BoardComponent extends PositionComponent
+    with
+        HasGameReference<RootPage>,
+        TapCallbacks,
+        FlameBlocReader<GameBloc, GameState> {
+  @override
+  void onGameResize(Vector2 gameSize) {
+    super.onGameResize(gameSize);
+    print("BoardComponent resized: $gameSize");
+
+    // 1. Розраховуємо розміри (30% під меню, 70% під ігрову зону)
+    double menuWidth = gameSize.x * 0.4;
+    double availableWidth = gameSize.x * 0.6;
+    double availableHeight = gameSize.y;
+
+    // Квадрат поля з відступом 60 пікселів
+    double boardSize = min(availableWidth, availableHeight) - 200;
+
+    // 2. Рахуємо координати початку поля
+    double startX = menuWidth + (availableWidth - boardSize) / 2;
+    double startY = (availableHeight - boardSize) / 2;
+
+    // 3. ЗАДАЄМО СТАН КОМПОНЕНТА ТУТ (Один раз, а не кожен кадр)
+    position = Vector2(startX, startY);
+    size = Vector2(boardSize, boardSize);
+  }
+
   @override
   void render(Canvas canvas) {
     super.render(canvas);
 
-    // Створюємо інструмент для малювання (фарбу)
-    final backgroundPaint = Paint()
-      ..color = const Color(0xFF1A1C29); // Гарний темно-синій "космічний" колір
+    if (size.x == 0 || size.y == 0) {
+      return; // Якщо розмір не встановлено, не малюємо
+    }
 
-    // Малюємо прямокутник розміром на весь екран гри
-    // size — це вбудована змінна Flame, яка знає точні розміри екрана пристрою
-    canvas.drawRect(size.toRect(), backgroundPaint);
+    // 4. Налаштовуємо пензель для малювання ліній сітки
+    final linePaint = Paint()
+      ..color =
+          const Color.fromARGB(
+            255,
+            96,
+            97,
+            63,
+          ) // Приємний сіро-синій колір для ліній
+      ..strokeWidth =
+          5 // Товщина лінії в пікселях
+      ..strokeCap = StrokeCap.round; // Закруглені краї ліній
+
+    double width = size.x;
+    double height = size.y;
+    double cellSize = width / 3;
+
+    // 5. Малюємо лінії сітки відносно координат нашого квадрата
+    for (int i = 1; i < 3; i++) {
+      // Вертикальні лінії
+      canvas.drawLine(
+        Offset(i * cellSize, 0),
+        Offset(i * cellSize, height),
+        linePaint,
+      );
+
+      // Горизонтальні лінії
+      canvas.drawLine(
+        Offset(0, i * cellSize),
+        Offset(width, i * cellSize),
+        linePaint,
+      );
+    }
   }
-}*/
 
-class RootPage extends StatelessWidget {
+  @override
+  void onTapDown(TapDownEvent event) {
+    super.onTapDown(event);
+
+    // event.localPosition дає нам координату кліку ВІДНОСНО верхнього лівого кута ПОЛЯ (від 0 до boardSize)
+    double clickX = event.localPosition.x;
+    double clickY = event.localPosition.y;
+
+    // Визначаємо розмір однієї клітинки
+    double cellSize = size.x / 3;
+
+    // Вираховуємо індекс стовпчика (X) та рядка (Y)
+    // Ділимо координату на розмір клітинки та відкидаємо дробову частину за допомогою toInt()
+    // Результат буде від 0 до 2
+    int col = (clickX / cellSize).toInt();
+    int row = (clickY / cellSize).toInt();
+
+    // Захист від випадкових виходів за межі (наприклад, клік рівно в край лінії)
+    col = col.clamp(0, 2);
+    row = row.clamp(0, 2);
+
+    int cellIndex = row * 3 + col; // Індекс клітинки від 0 до 8
+
+    // Виводимо в консоль результат для перевірки
+    print(
+      'Натиснуто клітинку: рядок = $row, стовпчик = $col, індекс = $cellIndex',
+    );
+    bloc.add(GameCellTapped(cellIndex));
+  }
+}
+
+/*class RootPage extends StatelessWidget {
   const RootPage({super.key});
 
   nucleus(int index, bool right, bool bottom, String text, VoidCallback onTap) {
@@ -337,4 +380,4 @@ class RootPage extends StatelessWidget {
       ),
     );
   }
-}
+}*/
