@@ -27,6 +27,9 @@ class RootPage extends FlameGame {
   Future<void> onLoad() async {
     super.onLoad();
 
+    final boardComponent = BoardComponent();
+    final newGameButton = NewGameButton(board: boardComponent, buttonHeight: 50);
+
     // Додаємо FlameBlocProvider. Він робить наш BLoC доступним
     // для ігрових компонентів, які ми додаватимемо пізніше.
     await add(
@@ -35,7 +38,8 @@ class RootPage extends FlameGame {
         children: [
           // Наразі тут немає дочірніх ігрових компонентів,
           // тому що ми створюємо просто порожній екран із фоном.
-          BoardComponent(),
+          boardComponent,
+          newGameButton,
         ],
       ),
     );
@@ -49,19 +53,23 @@ class BoardComponent extends PositionComponent
     with
         HasGameReference<RootPage>,
         TapCallbacks,
-        FlameBlocReader<GameBloc, GameState> {
+        FlameBlocReader<GameBloc, GameState>,
+        FlameBlocListenable<GameBloc, GameState> {
   @override
   void onGameResize(Vector2 gameSize) {
     super.onGameResize(gameSize);
     print("BoardComponent resized: $gameSize");
 
-    // 1. Розраховуємо розміри (30% під меню, 70% під ігрову зону)
+    // 1. Розраховуємо розміри (40% під меню, 60% під ігрову зону)
     double menuWidth = gameSize.x * 0.4;
     double availableWidth = gameSize.x * 0.6;
     double availableHeight = gameSize.y;
+    
+    double textAreaHeight = gameSize.y * 0.2;
+    double buttonNewGameHeight = gameSize.y * 0.2;
 
-    // Квадрат поля з відступом 60 пікселів
-    double boardSize = min(availableWidth, availableHeight) - 200;
+    // Квадрат поля з відступами під текст та кнопку початку нової гри
+    double boardSize = min(availableWidth, availableHeight) - (textAreaHeight + buttonNewGameHeight) - 60;
 
     // 2. Рахуємо координати початку поля
     double startX = menuWidth + (availableWidth - boardSize) / 2;
@@ -72,6 +80,15 @@ class BoardComponent extends PositionComponent
     size = Vector2(boardSize, boardSize);
   }
 
+  List<String> _currentField = List.filled(9, ""); // Стан поля для відображення
+  @override
+  void onNewState(GameState state) {
+    super.onNewState(state);
+
+    // Оновлюємо стан поля, коли отримуємо новий стан гри
+    _currentField = (state is GameLoaded) ? state.field : List.filled(9, "");
+  }
+
   @override
   void render(Canvas canvas) {
     super.render(canvas);
@@ -80,7 +97,7 @@ class BoardComponent extends PositionComponent
       return; // Якщо розмір не встановлено, не малюємо
     }
 
-    // 4. Налаштовуємо пензель для малювання ліній сітки
+    // 1. Налаштовуємо пензель для малювання ліній сітки
     final linePaint = Paint()
       ..color =
           const Color.fromARGB(
@@ -97,7 +114,7 @@ class BoardComponent extends PositionComponent
     double height = size.y;
     double cellSize = width / 3;
 
-    // 5. Малюємо лінії сітки відносно координат нашого квадрата
+    // 2. Малюємо лінії сітки відносно координат нашого квадрата
     for (int i = 1; i < 3; i++) {
       // Вертикальні лінії
       canvas.drawLine(
@@ -112,6 +129,45 @@ class BoardComponent extends PositionComponent
         Offset(width, i * cellSize),
         linePaint,
       );
+    }
+
+    final xPaint = Paint()
+      ..color = Color.fromARGB(255, 235, 94, 85)
+      ..strokeWidth = 8
+      ..strokeCap = StrokeCap.round;
+
+    final oPaint = Paint()
+      ..color = Color.fromARGB(255, 84, 172, 230)
+      ..strokeWidth = 8
+      ..style = PaintingStyle.stroke;
+
+    // Відступ всередині клітинки, щоб фігурки не торкалися ліній сітки
+    double padding = cellSize * 0.2;
+
+    // 3. Малюємо X та O відповідно до стану поля
+    for (int i = 0; i < 9; i++) {
+      String cellValue = _currentField[i];
+
+      int row = i ~/ 3; // Рядок (0, 1, 2)
+      int col = i % 3; // Стовпець (0, 1, 2)
+
+      double left = col * cellSize + padding;
+      double top = row * cellSize + padding;
+      double right = (col + 1) * cellSize - padding;
+      double bottom = (row + 1) * cellSize - padding;
+
+      if (cellValue == "X") {
+        // Малюємо X
+        canvas.drawLine(Offset(left, top), Offset(right, bottom), xPaint);
+        canvas.drawLine(Offset(right, top), Offset(left, bottom), xPaint);
+      } else if (cellValue == "O") {
+        // Малюємо O
+        double centerX = left + (cellSize - padding * 2) / 2;
+        double centerY = top + (cellSize - padding * 2) / 2;
+        double radius = (cellSize - padding * 2) / 2;
+
+        canvas.drawCircle(Offset(centerX, centerY), radius, oPaint);
+      }
     }
   }
 
@@ -143,6 +199,93 @@ class BoardComponent extends PositionComponent
       'Натиснуто клітинку: рядок = $row, стовпчик = $col, індекс = $cellIndex',
     );
     bloc.add(GameCellTapped(cellIndex));
+  }
+}
+
+class NewGameButton extends PositionComponent
+    with HasGameReference<RootPage>, TapCallbacks,
+        FlameBlocReader<GameBloc, GameState>{
+  final BoardComponent board;
+  final double buttonHeight;
+  
+  NewGameButton({required this.board, required this.buttonHeight});
+
+// Метод onGameResize стежить за тим, щоб кнопка ЗАВЖДИ була строго під полем
+  @override
+  void onGameResize(Vector2 gameSize) {
+    super.onGameResize(gameSize);
+
+    // Чекаємо, поки поле прорахує свої розміри
+    if (board.size.x == 0) return;
+
+    // Ширина кнопки дорівнюватиме ширині ігрового поля
+    double buttonWidth = board.size.x;
+    
+    // Відступ між полем та кнопкою
+    double gap = (gameSize.y * 0.2) / 2; // 20; 
+
+    // Позиція X: така сама, як у поля (вирівняно по лівому краю поля)
+    double x = board.position.x;
+    // Позиція Y: нижній край поля + відступ
+    double y = board.position.y + board.size.y + gap;
+
+    position = Vector2(x, y);
+    size = Vector2(buttonWidth, buttonHeight);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+
+    if (size.x == 0 || size.y == 0) {
+      return; // Якщо розмір не встановлено, не малюємо
+    }
+
+    // Малюємо кнопку "Нова гра"
+    final buttonPaint = Paint()
+      ..color = const Color.fromARGB(
+            255,
+            96,
+            97,
+            63,
+          )
+      ..style = PaintingStyle.fill;
+
+    final textPainter = TextPainter(
+      text: const TextSpan(
+        text: 'Нова гра',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+final rrect = RRect.fromRectAndRadius(
+      size.toRect(), //Rect.fromLTWH(0, 0, buttonWidth, buttonHeight),
+      const Radius.circular(12),
+    );
+    // Малюємо прямокутник кнопки
+    canvas.drawRRect(
+      rrect,
+      buttonPaint,
+    );
+
+    // Малюємо текст на кнопці
+    double textX = (size.x - textPainter.width) / 2;
+    double textY = (size.y - textPainter.height) / 2;
+    textPainter.paint(canvas, Offset(textX, textY));
+  }
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    super.onTapDown(event);
+
+    bloc.add(NewGameRequested());
+    // Тут можна додати логіку для початку нової гри
+    print('Натиснуто кнопку "Нова гра"');
   }
 }
 
