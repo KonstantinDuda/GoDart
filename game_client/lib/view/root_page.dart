@@ -11,6 +11,7 @@ import 'package:flame_bloc/flame_bloc.dart';
 
 import '../bloc/event_state/game_es.dart';
 import '../bloc/game_bloc.dart';
+import 'menu_component.dart';
 
 // ==========================================
 // 3. ІГРОВИЙ РУШІЙ FLAME
@@ -31,6 +32,8 @@ class RootPage extends FlameGame {
     final newGameButton = NewGameButton(board: boardComponent, buttonHeight: 50);
     final statusTextComponent = StatusTextComponent(board: boardComponent, textAreaHeight: 40);
 
+  final menuComponent = MenuComponent();
+
     // Додаємо FlameBlocProvider. Він робить наш BLoC доступним
     // для ігрових компонентів.
     await add(
@@ -40,6 +43,7 @@ class RootPage extends FlameGame {
           boardComponent,
           newGameButton,
           statusTextComponent,
+          menuComponent,
         ],
       ),
     );
@@ -373,6 +377,8 @@ class StatusTextComponent extends PositionComponent
     textPainter.paint(canvas, Offset(textX, textY));
   }
 }
+
+
 
 /*class RootPage extends StatelessWidget {
   const RootPage({super.key});
