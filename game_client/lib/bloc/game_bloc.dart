@@ -40,13 +40,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
         channel.stream.listen((message) {
           final data = jsonDecode(message);
-          print("Received message from server: $data");
+          //print("Received message from server: $data");
           if(data.containsKey("status")) {
             gameplayState = GameplayEnum.playOnline;
             if(data["status"] == "waiting") {
               //localBoard = List<String>.filled(9, "");
               cleanLocalData();
-            print("Waiting for opponent...");
+            //print("Waiting for opponent...");
             //emit(GameLoaded(List.from(localBoard), "Очікування суперника...", gameplayState));
             add(GameUpdateReceived(List.from(localBoard), "Очікування суперника..."));
             //return;
@@ -55,27 +55,25 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               localBoard = List<String>.from(data["board"]);
               currentTurn = data["turn"];
               localTurn = data["symbol"] ?? localTurn;
-              print("Game started or playing! Your symbol: $localTurn");
+              //print("Game started or playing! Your symbol: $localTurn");
 
               if(data.containsKey("winner")) {
                 localWinner = data["winner"];
                 if(localWinner != "" && localWinner != "Draw") {
-                print("Game ended. Winner: $localWinner");
+                //print("Game ended. Winner: $localWinner");
                 add(GameUpdateReceived(List.from(localBoard), "Гра завершена! Ваш символ: $localTurn. Переможець: $localWinner"));
                 return;
                 } else if(localWinner == "Draw") {
-                  print("Game ended in a draw.");
+                  //print("Game ended in a draw.");
                   add(GameUpdateReceived(List.from(localBoard), localWinner));
                   return;
                 }
               }
-              print('winner != "" && winner != "Draw". localBoard: $localBoard');
+              //print('winner != "" && winner != "Draw". localBoard: $localBoard');
               add(GameUpdateReceived(List.from(localBoard), "Ваш символ: $localTurn. Хід: $currentTurn"));
               //return;
             } else if(data["status"] == "new_game_requested") {
-              print("Opponent requested a new game. Resetting local game state.");
-              // TODO: Викликати випливаюче вікно з запитом на нову гру та підтвердженням, 
-              //якщо клієнт хоче почати нову гру з тим самим суперником
+              //print("Opponent requested a new game. Resetting local game state.");
 
               // localBoard = List<String>.filled(9, "");
               // localTurn = "X";

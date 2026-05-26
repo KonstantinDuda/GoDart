@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flame/events.dart';
-import 'package:flame/flame.dart';
+//import 'package:flame/flame.dart';
 import 'package:flutter/material.dart';
 //import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -29,17 +29,17 @@ class RootPage extends FlameGame {
 
     final boardComponent = BoardComponent();
     final newGameButton = NewGameButton(board: boardComponent, buttonHeight: 50);
+    final statusTextComponent = StatusTextComponent(board: boardComponent, textAreaHeight: 40);
 
     // Додаємо FlameBlocProvider. Він робить наш BLoC доступним
-    // для ігрових компонентів, які ми додаватимемо пізніше.
+    // для ігрових компонентів.
     await add(
       FlameBlocProvider<GameBloc, GameState>.value(
         value: gameBloc,
         children: [
-          // Наразі тут немає дочірніх ігрових компонентів,
-          // тому що ми створюємо просто порожній екран із фоном.
           boardComponent,
           newGameButton,
+          statusTextComponent,
         ],
       ),
     );
@@ -56,17 +56,17 @@ class BoardComponent extends PositionComponent
         FlameBlocReader<GameBloc, GameState>,
         FlameBlocListenable<GameBloc, GameState> {
   @override
-  void onGameResize(Vector2 gameSize) {
-    super.onGameResize(gameSize);
-    print("BoardComponent resized: $gameSize");
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    print("BoardComponent resized: $size");
 
     // 1. Розраховуємо розміри (40% під меню, 60% під ігрову зону)
-    double menuWidth = gameSize.x * 0.4;
-    double availableWidth = gameSize.x * 0.6;
-    double availableHeight = gameSize.y;
+    double menuWidth = size.x * 0.4;
+    double availableWidth = size.x * 0.6;
+    double availableHeight = size.y;
     
-    double textAreaHeight = gameSize.y * 0.2;
-    double buttonNewGameHeight = gameSize.y * 0.2;
+    double textAreaHeight = size.y * 0.2;
+    double buttonNewGameHeight = size.y * 0.2;
 
     // Квадрат поля з відступами під текст та кнопку початку нової гри
     double boardSize = min(availableWidth, availableHeight) - (textAreaHeight + buttonNewGameHeight) - 60;
@@ -77,7 +77,7 @@ class BoardComponent extends PositionComponent
 
     // 3. ЗАДАЄМО СТАН КОМПОНЕНТА ТУТ (Один раз, а не кожен кадр)
     position = Vector2(startX, startY);
-    size = Vector2(boardSize, boardSize);
+    this.size = Vector2(boardSize, boardSize);
   }
 
   List<String> _currentField = List.filled(9, ""); // Стан поля для відображення
@@ -212,8 +212,8 @@ class NewGameButton extends PositionComponent
 
 // Метод onGameResize стежить за тим, щоб кнопка ЗАВЖДИ була строго під полем
   @override
-  void onGameResize(Vector2 gameSize) {
-    super.onGameResize(gameSize);
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
 
     // Чекаємо, поки поле прорахує свої розміри
     if (board.size.x == 0) return;
@@ -222,7 +222,7 @@ class NewGameButton extends PositionComponent
     double buttonWidth = board.size.x;
     
     // Відступ між полем та кнопкою
-    double gap = (gameSize.y * 0.2) / 2; // 20; 
+    double gap = (size.y * 0.2) / 2; // 20; 
 
     // Позиція X: така сама, як у поля (вирівняно по лівому краю поля)
     double x = board.position.x;
@@ -230,7 +230,7 @@ class NewGameButton extends PositionComponent
     double y = board.position.y + board.size.y + gap;
 
     position = Vector2(x, y);
-    size = Vector2(buttonWidth, buttonHeight);
+    this.size = Vector2(buttonWidth, buttonHeight);
   }
 
   @override
@@ -286,6 +286,91 @@ final rrect = RRect.fromRectAndRadius(
     bloc.add(NewGameRequested());
     // Тут можна додати логіку для початку нової гри
     print('Натиснуто кнопку "Нова гра"');
+  }
+}
+
+class StatusTextComponent extends PositionComponent
+    with HasGameReference<RootPage>, FlameBlocListenable<GameBloc, GameState> {
+  final BoardComponent board;
+  final double textAreaHeight;
+
+  //String _currentTurn = 'X';
+  String _winner = '';
+
+  StatusTextComponent({required this.board, required this.textAreaHeight});
+  
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+
+    if(board.size.x == 0) return;
+
+    double textWidth = board.size.x;
+    double x = board.position.x;
+    double y = board.position.y - textAreaHeight - 20;
+
+    position = Vector2(x, y);
+    this.size = Vector2(textWidth, textAreaHeight);
+  }
+  
+  @override
+  void onNewState(GameState state) {
+    super.onNewState(state);
+
+  if(state is GameLoaded) {
+    print("StatusTextComponent received new GameLoaded state with winner: ${state.winner}");
+      _winner = state.winner;
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+  
+    if (size.x == 0 || size.y == 0) {
+      print("render: size is zero, skipping render");
+      return; // Якщо розмір не встановлено, не малюємо
+    }
+
+    String displayText = _winner;
+    Color textColor = Colors.green;
+
+    if (_winner == "Draw") {
+      displayText = "Нічия!";
+      textColor = Colors.orange;
+      //print("rendr: Winner is: $_winner");
+    } else if (_winner == "X" || _winner == "O") {
+      //print("rendr: Winner is: $_winner");
+      displayText = "Переміг гравець: $_winner!";
+    } else if (_winner == "new_game_requested") {
+      //print("rendr: Winner is: $_winner");
+      displayText = "Суперник запросив нову гру. Чекаємо на відповідь...";
+      textColor = Colors.blue;
+    } else if(_winner.isNotEmpty) {
+      //print("rendr: Winner is: $_winner");
+      displayText = _winner;
+      textColor = Colors.white;
+    } else {
+      displayText = "";
+      //print("Winner is empty");
+    }
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: displayText,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: size.x);
+
+
+    double textX = (size.x - textPainter.width) / 2;
+    double textY = (size.y - textPainter.height) / 2;
+    textPainter.paint(canvas, Offset(textX, textY));
   }
 }
 
