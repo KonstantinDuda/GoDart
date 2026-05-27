@@ -31,7 +31,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     if (gameplayState != GameplayEnum.playOnline) {
       print("Not connecting to server, gameplay is not online. Resetting local game state.");
-      emit(GameLoaded(List.from(localBoard), localWinner, gameplayState));
+      //emit(GameLoaded(List.from(localBoard), localWinner, gameplayState));
+      add(GameUpdateReceived(List.from(localBoard), "",));
     } else {
       try {
         channel = WebSocketChannel.connect(Uri.parse('ws://localhost:8080/ws'));
@@ -85,9 +86,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         });
       } on WebSocketChannelException catch (e) {
         print("Socket error: $e");
-        emit(
-          GameError("Сервер недоступний або порт закритий: $e", gameplayState),
-        );
+        // emit(
+        //   GameError("Сервер недоступний або порт закритий", gameplayState),
+        //);
+        gameplayState = GameplayEnum.playOnline;
+        cleanLocalData();
+        add(GameUpdateReceived(List.from(localBoard), "Сервер недоступний або порт закритий"));
       } catch (e) {
         print("Unexpected error: $e");
         emit(GameError("Не вдалося підключитись", gameplayState));

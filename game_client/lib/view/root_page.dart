@@ -29,10 +29,16 @@ class RootPage extends FlameGame {
     super.onLoad();
 
     final boardComponent = BoardComponent();
-    final newGameButton = NewGameButton(board: boardComponent, buttonHeight: 50);
-    final statusTextComponent = StatusTextComponent(board: boardComponent, textAreaHeight: 40);
+    final newGameButton = NewGameButton(
+      board: boardComponent,
+      buttonHeight: 50,
+    );
+    final statusTextComponent = StatusTextComponent(
+      board: boardComponent,
+      textAreaHeight: 40,
+    );
 
-  final menuComponent = MenuComponent();
+    final menuComponent = MenuComponent();
 
     // Додаємо FlameBlocProvider. Він робить наш BLoC доступним
     // для ігрових компонентів.
@@ -68,12 +74,15 @@ class BoardComponent extends PositionComponent
     double menuWidth = size.x * 0.4;
     double availableWidth = size.x * 0.6;
     double availableHeight = size.y;
-    
+
     double textAreaHeight = size.y * 0.2;
     double buttonNewGameHeight = size.y * 0.2;
 
     // Квадрат поля з відступами під текст та кнопку початку нової гри
-    double boardSize = min(availableWidth, availableHeight) - (textAreaHeight + buttonNewGameHeight) - 60;
+    double boardSize =
+        min(availableWidth, availableHeight) -
+        (textAreaHeight + buttonNewGameHeight) -
+        60;
 
     // 2. Рахуємо координати початку поля
     double startX = menuWidth + (availableWidth - boardSize) / 2;
@@ -207,14 +216,16 @@ class BoardComponent extends PositionComponent
 }
 
 class NewGameButton extends PositionComponent
-    with HasGameReference<RootPage>, TapCallbacks,
-        FlameBlocReader<GameBloc, GameState>{
+    with
+        HasGameReference<RootPage>,
+        TapCallbacks,
+        FlameBlocReader<GameBloc, GameState> {
   final BoardComponent board;
   final double buttonHeight;
-  
+
   NewGameButton({required this.board, required this.buttonHeight});
 
-// Метод onGameResize стежить за тим, щоб кнопка ЗАВЖДИ була строго під полем
+  // Метод onGameResize стежить за тим, щоб кнопка ЗАВЖДИ була строго під полем
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
@@ -224,9 +235,9 @@ class NewGameButton extends PositionComponent
 
     // Ширина кнопки дорівнюватиме ширині ігрового поля
     double buttonWidth = board.size.x;
-    
+
     // Відступ між полем та кнопкою
-    double gap = (size.y * 0.2) / 2; // 20; 
+    double gap = (size.y * 0.2) / 2; // 20;
 
     // Позиція X: така сама, як у поля (вирівняно по лівому краю поля)
     double x = board.position.x;
@@ -247,12 +258,7 @@ class NewGameButton extends PositionComponent
 
     // Малюємо кнопку "Нова гра"
     final buttonPaint = Paint()
-      ..color = const Color.fromARGB(
-            255,
-            96,
-            97,
-            63,
-          )
+      ..color = const Color.fromARGB(255, 96, 97, 63)
       ..style = PaintingStyle.fill;
 
     final textPainter = TextPainter(
@@ -267,15 +273,12 @@ class NewGameButton extends PositionComponent
       textDirection: TextDirection.ltr,
     )..layout();
 
-final rrect = RRect.fromRectAndRadius(
+    final rrect = RRect.fromRectAndRadius(
       size.toRect(), //Rect.fromLTWH(0, 0, buttonWidth, buttonHeight),
       const Radius.circular(12),
     );
     // Малюємо прямокутник кнопки
-    canvas.drawRRect(
-      rrect,
-      buttonPaint,
-    );
+    canvas.drawRRect(rrect, buttonPaint);
 
     // Малюємо текст на кнопці
     double textX = (size.x - textPainter.width) / 2;
@@ -302,35 +305,50 @@ class StatusTextComponent extends PositionComponent
   String _winner = '';
 
   StatusTextComponent({required this.board, required this.textAreaHeight});
-  
+
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
 
-    if(board.size.x == 0) return;
+    if (board.size.x == 0) return;
+    double textWidth = size.x * 0.65; // board.size.x;
 
-    double textWidth = board.size.x;
-    double x = board.position.x;
-    double y = board.position.y - textAreaHeight - 20;
+    double menuWidth = size.x * 0.3;
+    double availableWidth = size.x * 0.7;
+
+    // double x = board.position.x;
+    // double y = board.position.y - textAreaHeight - 20;
+
+    double x = menuWidth + (availableWidth - textWidth) / 2;
+    double y = board.position.y - textAreaHeight - 15;
 
     position = Vector2(x, y);
     this.size = Vector2(textWidth, textAreaHeight);
   }
-  
+
   @override
   void onNewState(GameState state) {
     super.onNewState(state);
 
-  if(state is GameLoaded) {
-    print("StatusTextComponent received new GameLoaded state with winner: ${state.winner}");
+    if (state is GameLoaded) {
+      print(
+        "StatusTextComponent received new GameLoaded state with winner: ${state.winner}",
+      );
       _winner = state.winner;
+    } else if (state is GameError) {
+      print(
+        "StatusTextComponent received new GameError state with message: ${state.message}",
+      );
+      _winner = state.message;
+    } else {
+      _winner = '';
     }
   }
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-  
+
     if (size.x == 0 || size.y == 0) {
       print("render: size is zero, skipping render");
       return; // Якщо розмір не встановлено, не малюємо
@@ -350,7 +368,7 @@ class StatusTextComponent extends PositionComponent
       //print("rendr: Winner is: $_winner");
       displayText = "Суперник запросив нову гру. Чекаємо на відповідь...";
       textColor = Colors.blue;
-    } else if(_winner.isNotEmpty) {
+    } else if (_winner.isNotEmpty) {
       //print("rendr: Winner is: $_winner");
       displayText = _winner;
       textColor = Colors.white;
@@ -371,14 +389,11 @@ class StatusTextComponent extends PositionComponent
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: size.x);
 
-
     double textX = (size.x - textPainter.width) / 2;
     double textY = (size.y - textPainter.height) / 2;
     textPainter.paint(canvas, Offset(textX, textY));
   }
 }
-
-
 
 /*class RootPage extends StatelessWidget {
   const RootPage({super.key});
