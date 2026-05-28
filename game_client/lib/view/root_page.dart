@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flame/events.dart';
 //import 'package:flame/flame.dart';
 import 'package:flutter/material.dart';
-//import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:flame/game.dart';
 import 'package:flame/components.dart';
@@ -303,6 +303,7 @@ class StatusTextComponent extends PositionComponent
 
   //String _currentTurn = 'X';
   String _winner = '';
+  Color _textColor = Colors.green;
 
   StatusTextComponent({required this.board, required this.textAreaHeight});
 
@@ -335,6 +336,29 @@ class StatusTextComponent extends PositionComponent
         "StatusTextComponent received new GameLoaded state with winner: ${state.winner}",
       );
       _winner = state.winner;
+      if (state.winner == "new_game_requested") {
+        _winner = "";
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Перевіряємо, чи оверлей СУДЯЧИ З УСЬОГО ще не відкритий, щоб не дублювати
+          if (!game.overlays.isActive('InviteDialog')) {
+            game.overlays.add('InviteDialog');
+          }
+        });
+      } else if (_winner == "Draw") {
+      _winner = "Нічия!";
+      _textColor = Colors.orange;
+      //print("rendr: Winner is: $_winner");
+    } else if (_winner == "X" || _winner == "O") {
+      //print("rendr: Winner is: $_winner");
+      _winner = "Переміг гравець: $_winner!";
+    } else if (_winner.isNotEmpty) {
+      //print("rendr: Winner is: $_winner");
+      _winner = _winner;
+      _textColor = Colors.white60;
+    } else {
+      _winner = "";
+      //print("Winner is empty");
+    }
     } else if (state is GameError) {
       print(
         "StatusTextComponent received new GameError state with message: ${state.message}",
@@ -354,34 +378,14 @@ class StatusTextComponent extends PositionComponent
       return; // Якщо розмір не встановлено, не малюємо
     }
 
-    String displayText = _winner;
-    Color textColor = Colors.green;
-
-    if (_winner == "Draw") {
-      displayText = "Нічия!";
-      textColor = Colors.orange;
-      //print("rendr: Winner is: $_winner");
-    } else if (_winner == "X" || _winner == "O") {
-      //print("rendr: Winner is: $_winner");
-      displayText = "Переміг гравець: $_winner!";
-    } else if (_winner == "new_game_requested") {
-      //print("rendr: Winner is: $_winner");
-      displayText = "Суперник запросив нову гру. Чекаємо на відповідь...";
-      textColor = Colors.blue;
-    } else if (_winner.isNotEmpty) {
-      //print("rendr: Winner is: $_winner");
-      displayText = _winner;
-      textColor = Colors.white;
-    } else {
-      displayText = "";
-      //print("Winner is empty");
-    }
+    //String displayText = _winner;
+    //Color textColor = Colors.green;
 
     final textPainter = TextPainter(
       text: TextSpan(
-        text: displayText,
+        text: _winner, //displayText,
         style: TextStyle(
-          color: textColor,
+          color: _textColor,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
@@ -395,238 +399,99 @@ class StatusTextComponent extends PositionComponent
   }
 }
 
-/*class RootPage extends StatelessWidget {
-  const RootPage({super.key});
+class OnlineRequestDialog extends StatelessWidget {
+  final RootPage game;
 
-  nucleus(int index, bool right, bool bottom, String text, VoidCallback onTap) {
-    // Осередок
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          right: right == true ? BorderSide(width: 1) : BorderSide.none,
-          bottom: bottom == true ? BorderSide(width: 1) : BorderSide.none,
-        ),
-      ),
-      child: TextButton(onPressed: onTap, child: Text(text)),
-    );
-  }
-
-  exitOnlineDialog(BuildContext context) async {
-    final shouldExit = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Вихід з онлайн гри'),
-        content: const Text('Ви впевнені, що хочете вийти з онлайн гри?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Ні'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Так'),
-          ),
-        ],
-      ),
-    ) ?? false;
-
-    return shouldExit;
-  }
+  const OnlineRequestDialog({super.key, required this.game});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.lightBlue,
-        title: Text("Гра в хрестики-нулики"),
-        actions: [
-          IconButton(
-            padding: const EdgeInsets.only(right: 50),
-            icon: Icon(Icons.refresh),
-            onPressed: () {
-              context.read<GameBloc>().add(GameConnectToServer());
-            },
-          ),
-        ],
-      ),
-      body: BlocBuilder<GameBloc, GameState>(
+    return Center(
+      child: BlocBuilder<GameBloc, GameState>(
         builder: (context, state) {
-          var gameplay = GameplayEnum.twoPlonePC;
-          var messageColor = Colors.green;
-          var winner = "";
-
-          if (state is GameLoaded) {
-            gameplay = state.gameplay;
-            if(state.winner.isNotEmpty) {
-              messageColor = Colors.green;
-              if(state.winner == "Draw") {
-                winner = "Нічия!";
-                messageColor = Colors.orange;
-              } else if(state.winner == "X" || state.winner == "O") {
-                winner = "Переміг гравець ${state.winner}!";
-              } else if(state.winner == "new_game_requested") {
-                return AlertDialog(
-                  title: const Text('Нова гра'),
-                  content: const Text('Суперник запросив нову гру. Ви хочете почати?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        //Navigator.of(context).pop();
-                        context.read<GameBloc>().add(NewGameResponse(false));
-                      },
-                      child: const Text('Ні'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        //Navigator.of(context).pop();
-                        context.read<GameBloc>().add(NewGameResponse(true));
-                      },
-                      child: const Text('Так'),
-                    ),
-                  ],
-                );
-              }
-              else {
-                winner = state.winner;
-              }
-            }
-          } else  if(state is GameError) {
-            //print("State isn't GameLoaded");
-            gameplay = state.gameplay;
-            winner = state.message;
-            messageColor = Colors.red;
-            print(winner);
-          }
-              return Row(
+          return Container(
+            width: 300,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(
+                255,
+                38,
+                41,
+                56,
+              ), // Наш фірмовий сіро-синій колір
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color.fromARGB(255, 33, 150, 243),
+                width: 2,
+              ), // Синя рамка
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  const Text(
+                    'Запит на нову гру',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Інший гравець пропонує почати новий раунд. Погодитись?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color.fromARGB(255, 170, 170, 180),
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      TextButton(
-                        onPressed: () async {
-                          if(gameplay == GameplayEnum.playOnline) {
-                            final shouldExit = await exitOnlineDialog(context);
-                            if (shouldExit) {
-                              context.read<GameBloc>().add(
-                                ChangeGameplay(GameplayEnum.twoPlonePC),
-                              );
-                            }
-                          } else {
-                          context.read<GameBloc>().add(
-                            ChangeGameplay(GameplayEnum.twoPlonePC),
-                          );
-                        }
-                        },
-                        style: TextButton.styleFrom(
-                          backgroundColor: gameplay == GameplayEnum.twoPlonePC
-                              ? Colors.lightBlue
-                              : Colors.grey,
-                          foregroundColor: Colors.black,
-                        ),
-                        child: const Text("2 гравці на одному пристрої"),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          if(gameplay == GameplayEnum.playOnline) {
-                            final shouldExit = await exitOnlineDialog(context);
-                            if (shouldExit) {
-                              context.read<GameBloc>().add(
-                                ChangeGameplay(GameplayEnum.vsAI),
-                              );
-                            }
-                          } else {
-                          context.read<GameBloc>().add(
-                            ChangeGameplay(GameplayEnum.vsAI),
-                          );
-                          }
-                        },
-                        style: TextButton.styleFrom(
-                          backgroundColor: gameplay == GameplayEnum.vsAI
-                              ? Colors.lightBlue
-                              : Colors.grey,
-                          foregroundColor: Colors.black,
-                        ),
-                        child: const Text("Грати з комп'ютером"),
-                      ),
+                      // Кнопка Відхилити
                       TextButton(
                         onPressed: () {
-                          context.read<GameBloc>().add(
-                            ChangeGameplay(GameplayEnum.playOnline),
-                          );
-                          
+                          // 1. Відправляємо івент відмови в твій Блок
+                          // game.gameCubit.add(RejectGameEvent());
+                          context.read<GameBloc>().add(NewGameResponse(false));
+              
+                          // 2. Ховаємо це віконце
+                          game.overlays.remove('InviteDialog');
                         },
-                        style: TextButton.styleFrom(
-                          backgroundColor: gameplay == GameplayEnum.playOnline
-                              ? Colors.lightBlue
-                              : Colors.grey,
-                          foregroundColor: Colors.black,
+                        child: const Text(
+                          'Відхилити',
+                          style: TextStyle(color: Colors.redAccent),
                         ),
-                        child: const Text("Грати онлайн"),
+                      ),
+                      // Кнопка Погодитись
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ),
+                        onPressed: () {
+                          // 1. Відправляємо івент згоди в Блок (очищення поля тощо)
+                          // game.gameCubit.add(AcceptGameEvent());
+                          context.read<GameBloc>().add(NewGameResponse(true));
+              
+                          // 2. Ховаємо віконце
+                          game.overlays.remove('InviteDialog');
+                        },
+                        child: const Text(
+                          'Грати',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
-                  //Center(
-                  //child:
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.7,
-                    height: 350,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        SizedBox(
-                          height: 30,
-                          child: Text(
-                            winner,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: messageColor, //Colors.green,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 200,
-                          height: 200,
-                          child: GridView.count(
-                            padding: const EdgeInsets.all(10),
-                            crossAxisCount: 3,
-                            children: List.generate(9, (index) {
-                              return nucleus(
-                                index,
-                                (index % 3 != 2),
-                                (index < 6),
-                                (state is GameLoaded) ? state.field[index] : "",
-                                () {
-                                  // Send to server button index
-                                  context.read<GameBloc>().add(
-                                    GameCellTapped(index),
-                                  );
-                                },
-                              );
-                            }),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  //),
                 ],
-              );
-            //},
-          //);
+              ),
+            ),
+          );
         },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          context.read<GameBloc>().add(NewGameRequested());
-        },
-        backgroundColor: Colors.lightBlue,
-        foregroundColor: Colors.black,
-        tooltip: 'New Game',
-        label: const Text("Нова гра", style: TextStyle(fontSize: 16)),
       ),
     );
   }
-}*/
+}

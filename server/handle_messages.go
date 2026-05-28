@@ -141,14 +141,25 @@ func playerMove(room *Room, msg map[string]any /*index int, */, player string) {
 			}
 		case 0:
 			fmt.Printf("Гравець %s відмовляється від нової гри: %v \n", player, newGame)
-			for _, p := range room.Players {
-				if p.ID != int(msg["id"].(float64)) {
-					p.Conn.Close()
-				} else {
-					joinQueue <- p
-					fmt.Printf("Гравець %d повертається в чергу \n", p.ID)
-				}
+			if player == "O" {
+				joinQueue <- room.Players[0]
+				fmt.Printf("Гравець %d повертається в чергу \n", room.Players[0].ID)
+				room.Players[1].Conn.Close()
+			} else {
+				joinQueue <- room.Players[1]
+				fmt.Printf("Гравець %d повертається в чергу \n", room.Players[0].ID)
+				room.Players[0].Conn.Close()
 			}
+			// for _, p := range room.Players {
+			// 	if p != nil {
+			// 		if p.ID != int(msg["id"].(float64)) {
+			// 			p.Conn.Close()
+			// 		} else {
+			// 			joinQueue <- p
+			// 			fmt.Printf("Гравець %d повертається в чергу \n", p.ID)
+			// 		}
+			// 	}
+			// }
 		}
 	}
 

@@ -38,6 +38,11 @@ class MyApp extends StatelessWidget {
           builder: (context) {
             return GameWidget(
               game: RootPage(gameBloc: BlocProvider.of<GameBloc>(context)),
+            overlayBuilderMap: {
+              'InviteDialog': (BuildContext context, RootPage game) {
+                return OnlineRequestDialog(game: game);
+              }
+            },
             );
           },
         ),
