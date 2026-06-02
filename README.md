@@ -20,12 +20,21 @@
 
 ---
 
-## 🛠️ Стек технологій
+## 🛠️ **Client**. Стек технологій
 
 * **Flutter** & **Dart**
 * **Flame Engine** (Компоненти: `PositionComponent`, `TapCallbacks`)
 * **flame_bloc** & **flutter_bloc** (Керування станом)
 * **Custom Paint / Canvas API** (Для кастомної графіки та анімацій)
+
+---
+
+## 🛠️ **Backend**. Стек технологій 
+
+* Go (Golang)
+* WebSockets (Gorilla)
+* JSON-RPC / Custom Events protocol
+
 
 ---
 
@@ -65,13 +74,6 @@
 
 ---
 
-## 🛠️ Стек технологій
-
-* **Client**: Flutter & Dart, Flame Engine, flame_bloc, Canvas API.
-* **Backend**: Go (Golang), WebSockets (Gorilla), JSON-RPC / Custom Events protocol.
-
----
-
 ## 🏁 Як запустити проект
 
 Щоб протестувати мережевий режим гри, вам знадобиться запустити як локальний сервер, так і клієнтський додаток Flutter.
@@ -83,9 +85,11 @@
    git clone https://github.com/KonstantinDuda/GoDart.git
 3. Перейдіть у директорію клієнта
     cd game_client
-4. Запустіть ігровий клієнт
-    flutter run -d linux (у випадку запуску на лінукс)
-    flutter run -d chrome (для запуску в браузері Chrome)
+4. Запустіть ігровий клієнт:
+   ```bash 
+   flutter run -d linux (у випадку запуску на лінукс)
+   ```bash
+   flutter run -d chrome (для запуску в браузері Chrome)
 
 Для тестування онлайн-режиму запустіть два окремі екземпляри додатка (наприклад, у Chrome та на емуляторі), запустіть сервер, оберіть режим "Грати онлайн" та протестуйте систему надсилання запитів і синхронізацію ходів.
 
@@ -93,11 +97,14 @@
 Переконайтеся, що у вас встановлено Go (версії 1.18+).
 
 1. Відкрийте термінал та перейдіть у папку з сервером:
+   ```bash
    cd server
 2. Завантажте необхідні модулі:
-    go mod tidy
-3. Запустіть сервер
-    go run .
+   ```bash 
+   go mod tidy
+3. Запустіть сервер:
+   ```bash
+   go run .
 
 ---
 
