@@ -31,9 +31,9 @@ List<CellAnimation> _cells = List.generate(9, (_) => CellAnimation(value: '', pr
     super.onGameResize(size);
     //print("BoardComponent resized: $size");
 
-    // 1. Розраховуємо розміри (40% під меню, 60% під ігрову зону)
-    double menuWidth = size.x * 0.4;
-    double availableWidth = size.x * 0.6;
+    // 1. Розраховуємо розміри (30% під меню, 70% під ігрову зону)
+    double menuWidth = size.x * 0.3;
+    double availableWidth = size.x * 0.7;
     double availableHeight = size.y;
 
     double textAreaHeight = size.y * 0.2;
@@ -49,7 +49,7 @@ List<CellAnimation> _cells = List.generate(9, (_) => CellAnimation(value: '', pr
     double startX = menuWidth + (availableWidth - boardSize) / 2;
     double startY = (availableHeight - boardSize) / 2;
 
-    // 3. ЗАДАЄМО СТАН КОМПОНЕНТА ТУТ (Один раз, а не кожен кадр)
+    // 3. ЗАДАЄМО СТАН КОМПОНЕНТА
     position = Vector2(startX, startY);
     this.size = Vector2(boardSize, boardSize);
   }

@@ -40,9 +40,9 @@ class StatusTextComponent extends PositionComponent
     super.onNewState(state);
 
     if (state is GameLoaded) {
-      print(
-        "StatusTextComponent received new GameLoaded state with winner: ${state.winner}",
-      );
+      // print(
+      //   "StatusTextComponent received new GameLoaded state with winner: ${state.winner}",
+      // );
       _winner = state.winner;
       if (state.winner == "new_game_requested") {
         _winner = "";

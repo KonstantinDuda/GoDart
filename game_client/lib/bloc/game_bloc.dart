@@ -30,9 +30,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     print("Connecting to WebSocket server..., gameplay = $gameplayState");
 
     if (gameplayState != GameplayEnum.playOnline) {
-      print("Not connecting to server, gameplay is not online. Resetting local game state.");
+      print(
+        "Not connecting to server, gameplay is not online. Resetting local game state.",
+      );
       //emit(GameLoaded(List.from(localBoard), localWinner, gameplayState));
-      add(GameUpdateReceived(List.from(localBoard), "",));
+      add(GameUpdateReceived(List.from(localBoard), ""));
     } else {
       try {
         channel = WebSocketChannel.connect(Uri.parse('ws://localhost:8080/ws'));
@@ -42,44 +44,61 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         channel.stream.listen((message) {
           final data = jsonDecode(message);
           //print("Received message from server: $data");
-          if(data.containsKey("status")) {
+          if (data.containsKey("status")) {
             gameplayState = GameplayEnum.playOnline;
-            if(data["status"] == "waiting") {
+            if (data["status"] == "waiting") {
               //localBoard = List<String>.filled(9, "");
               cleanLocalData();
-            //print("Waiting for opponent...");
-            //emit(GameLoaded(List.from(localBoard), "Очікування суперника...", gameplayState));
-            add(GameUpdateReceived(List.from(localBoard), "Очікування суперника..."));
-            //return;
-            } else if(data["status"] == "started" || data["status"] == "playing") {
-
+              //print("Waiting for opponent...");
+              //emit(GameLoaded(List.from(localBoard), "Очікування суперника...", gameplayState));
+              add(
+                GameUpdateReceived(
+                  List.from(localBoard),
+                  "Очікування суперника...",
+                ),
+              );
+              //return;
+            } else if (data["status"] == "started" ||
+                data["status"] == "playing") {
               localBoard = List<String>.from(data["board"]);
               currentTurn = data["turn"];
               localTurn = data["symbol"] ?? localTurn;
               //print("Game started or playing! Your symbol: $localTurn");
 
-              if(data.containsKey("winner")) {
+              if (data.containsKey("winner")) {
                 localWinner = data["winner"];
-                if(localWinner != "" && localWinner != "Draw") {
-                //print("Game ended. Winner: $localWinner");
-                add(GameUpdateReceived(List.from(localBoard), "Гра завершена! Ваш символ: $localTurn. Переможець: $localWinner"));
-                return;
-                } else if(localWinner == "Draw") {
+                if (localWinner != "" && localWinner != "Draw") {
+                  //print("Game ended. Winner: $localWinner");
+                  add(
+                    GameUpdateReceived(
+                      List.from(localBoard),
+                      "Гра завершена! Ваш символ: $localTurn. Переможець: $localWinner",
+                    ),
+                  );
+                  return;
+                } else if (localWinner == "Draw") {
                   //print("Game ended in a draw.");
                   add(GameUpdateReceived(List.from(localBoard), localWinner));
                   return;
                 }
               }
               //print('winner != "" && winner != "Draw". localBoard: $localBoard');
-              add(GameUpdateReceived(List.from(localBoard), "Ваш символ: $localTurn. Хід: $currentTurn"));
+              add(
+                GameUpdateReceived(
+                  List.from(localBoard),
+                  "Ваш символ: $localTurn. Хід: $currentTurn",
+                ),
+              );
               //return;
-            } else if(data["status"] == "new_game_requested") {
+            } else if (data["status"] == "new_game_requested") {
               //print("Opponent requested a new game. Resetting local game state.");
 
               // localBoard = List<String>.filled(9, "");
               // localTurn = "X";
               // localWinner = "";
-              add(GameUpdateReceived(List.from(localBoard), "new_game_requested"));
+              add(
+                GameUpdateReceived(List.from(localBoard), "new_game_requested"),
+              );
               return;
             }
           }
@@ -91,7 +110,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         //);
         gameplayState = GameplayEnum.playOnline;
         cleanLocalData();
-        add(GameUpdateReceived(List.from(localBoard), "Сервер недоступний або порт закритий"));
+        add(
+          GameUpdateReceived(
+            List.from(localBoard),
+            "Сервер недоступний або порт закритий",
+          ),
+        );
       } catch (e) {
         print("Unexpected error: $e");
         emit(GameError("Не вдалося підключитись", gameplayState));
@@ -106,21 +130,38 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   _tap(GameCellTapped event, Emitter<GameState> emit) async {
     //var draw = false;
-print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $currentTurn, local turn: $localTurn, local winner: $localWinner");
+    print(
+      "Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $currentTurn, local turn: $localTurn, local winner: $localWinner",
+    );
 
-    if (gameplayState != GameplayEnum.playOnline && 
-    (localBoard[event.index] != "" || localWinner != "")) {
+    if (gameplayState != GameplayEnum.playOnline &&
+        (localBoard[event.index] != "" || localWinner != "")) {
       print("Cell already occupied or game over");
       return;
-    } if(gameplayState == GameplayEnum.playOnline && localWinner != "") {
+    }
+    if (gameplayState == GameplayEnum.playOnline && localWinner != "") {
       print("Game over. Winner: $localWinner");
-      add(GameUpdateReceived(List.from(localBoard), "Гра завершена! Ваш символ: $localTurn. Переможець: $localWinner"));
+      add(
+        GameUpdateReceived(
+          List.from(localBoard),
+          "Гра завершена! Ваш символ: $localTurn. Переможець: $localWinner",
+        ),
+      );
       return;
-    } else if (gameplayState == GameplayEnum.playOnline && currentTurn != localTurn) {
-      print("It's not your turn. Current turn: $currentTurn, your symbol: $localTurn");
-      add(GameUpdateReceived(List.from(localBoard), "Очікування ходу суперника..."));
+    } else if (gameplayState == GameplayEnum.playOnline &&
+        currentTurn != localTurn) {
+      print(
+        "It's not your turn. Current turn: $currentTurn, your symbol: $localTurn",
+      );
+      add(
+        GameUpdateReceived(
+          List.from(localBoard),
+          "Очікування ходу суперника...",
+        ),
+      );
       return;
-    } else if(gameplayState == GameplayEnum.playOnline && currentTurn == localTurn) {
+    } else if (gameplayState == GameplayEnum.playOnline &&
+        currentTurn == localTurn) {
       channel.sink.add(jsonEncode({"index": event.index, "symbol": localTurn}));
       print("Sent move to server: ${event.index}");
       return;
@@ -162,7 +203,7 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
 
     var canAnyoneWin = false;
     checkDraw() {
-      print("Checking for draw...");
+      //print("Checking for draw...");
       for (var p in winPatterns) {
         bool hasX = false;
         bool hasO = false;
@@ -171,7 +212,7 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
           if (localBoard[index] == "O") hasO = true;
         }
         if (!(hasX && hasO)) {
-          print("At least one winning pattern is still possible: $p");
+          //print("At least one winning pattern is still possible: $p");
           canAnyoneWin = true;
           break;
         } else {
@@ -180,7 +221,7 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
       }
 
       if (canAnyoneWin == false) {
-        print("It's a draw!");
+        //print("It's a draw!");
         localWinner = "Draw";
         return "Draw";
       }
@@ -190,14 +231,14 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
     winnerDrawCheck(bool isLocalTurnChange) {
       var winner = checkWinner();
       if (winner != "") {
-        print("Winner: $winner");
+        //print("Winner: $winner");
         emit(GameLoaded(localBoard, winner, gameplayState));
         return winner;
       } else {
         // print("No winner yet");
         var check = checkDraw();
         if (check == "Draw") {
-          print("It's a draw!");
+          //print("It's a draw!");
           emit(GameLoaded(List.from(localBoard), "Draw", gameplayState));
           return "Draw";
         } else {
@@ -209,6 +250,37 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
         }
       }
       return "";
+    }
+
+    findAndBlockFork(List<String> board) {
+      int countWinningOpportunities(List<String> testBoard, String symbol) {
+        var opportunities = 0;
+        for (var p in winPatterns) {
+          int symbolCount = 0;
+          int emptyCount = 0;
+          for (var index in p) {
+            if (testBoard[index] == symbol) symbolCount++;
+            if (testBoard[index] == "") emptyCount++;
+          }
+          // Якщо в лінії вже є 2 знаки гравця і 1 пуста клітинка — це готова загроза перемоги
+          if (symbolCount == 2 && emptyCount == 1) {
+            opportunities++;
+          }
+        }
+        return opportunities;
+      }
+
+      for(var i = 0; i < 9; i++) {
+        if(board[i] == "") {
+          board[i] = "X"; // Тимчасово ставимо "X" в порожню клітинку
+          if (countWinningOpportunities(board, "X") >= 2) {
+            print("Blocking fork at index: $i");
+            board[i] = "O"; // Блокуємо хід гравця
+            return true;
+          }
+          board[i] = ""; // Відновлюємо клітинку
+        }
+      }
     }
 
     if (gameplayState == GameplayEnum.playOnline) {
@@ -224,6 +296,10 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
         winnerDrawCheck(true);
       }
     } else {
+      // AI програє якщо гравець займає 3 та 7 клітинки першими кроками, тож
+      // AI не може займати 1 клітинку у випадку якщо гравець займає 3 та 7.
+      // Враховуючи подібні комбінації було написано функцію findAndBlockFork, 
+      // яка шукає та блокує такі ходи гравця
       localBoard[event.index] = "X";
       var wd = winnerDrawCheck(false);
       print("tap. WinnerDrawCheck done, winner/draw: $wd");
@@ -243,13 +319,12 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
         } else {
           localBoard[0] = "O";
         }
-      } else if (stepCounter == 6 &&
-          localBoard[4] == "X" &&
-          localBoard[8] == "X") {
-        localBoard[2] = "O";
+      } else if (stepCounter == 6 && (localBoard[0] == "X" && localBoard[8] == "X" ||
+          localBoard[2] == "X" && localBoard[6] == "X")) {
+        localBoard[1] = "O";
       } else {
-        canXwin(String symbol) {
-          var canIsXwin = false;
+        canSymbolWin(String symbol) {
+          //var canIsSwin = false;
           for (var p in winPatterns) {
             int isXcount = 0;
             int emptyCount = 0;
@@ -262,18 +337,20 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
               }
             }
             if (isXcount == 2 && emptyCount == 1) {
+              print("Blocking win at index: $emptyIndex");
               localBoard[emptyIndex] = "O";
               return true;
             }
           }
-          return canIsXwin;
+          return false;
         }
 
-        var canAiWin = canXwin("O");
+        var canAiWin = canSymbolWin("O");
         if (!canAiWin) {
-          var canPlayerWin = canXwin("X");
+          var canPlayerWin = canSymbolWin("X");
           if (!canPlayerWin) {
-            var emptyCells = <int>[];
+            findAndBlockFork(localBoard);
+            /*var emptyCells = <int>[];
             for (var i = 0; i < localBoard.length; i++) {
               if (localBoard[i] == "") {
                 emptyCells.add(i);
@@ -293,12 +370,12 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
                   break;
                 }
               }
-            }
+            }*/
           }
         }
       }
 
-      winnerDrawCheck(false);
+      wd = winnerDrawCheck(false);
       print("tap. WinnerDrawCheck done after AI move, winner/draw: $wd");
 
       localTurn = "X";
@@ -320,28 +397,30 @@ print("Cell tapped: ${event.index}, gameplay: $gameplayState, current turn: $cur
   }
 
   _newGameResponse(NewGameResponse event, Emitter<GameState> emit) /*async*/ {
-      // channel.sink.add(jsonEncode({"new_game_response": event.accepted ? 1 : 0}));
-      print("New game response: ${event.accepted}");
-      if(event.accepted) {
-        channel.sink.add(jsonEncode({"new_game": 2}));
-      } else {
-        channel.sink.add(jsonEncode({"new_game": 0}));
-        cleanLocalData();
-        gameplayState = GameplayEnum.twoPlonePC;
-        emit(GameLoaded(List.from(localBoard), "", gameplayState));
-      }
+    // channel.sink.add(jsonEncode({"new_game_response": event.accepted ? 1 : 0}));
+    print("New game response: ${event.accepted}");
+    if (event.accepted) {
+      channel.sink.add(jsonEncode({"new_game": 2}));
+    } else {
+      channel.sink.add(jsonEncode({"new_game": 0}));
+      cleanLocalData();
+      gameplayState = GameplayEnum.twoPlonePC;
+      emit(GameLoaded(List.from(localBoard), "", gameplayState));
+    }
   }
 
-  _changeGameplay(ChangeGameplay event, Emitter<GameState> emit) /*async*/ {    
+  _changeGameplay(ChangeGameplay event, Emitter<GameState> emit) /*async*/ {
     var oldGameplay = gameplayState;
     gameplayState = event.gameplay;
     print("Gameplay changed to: $gameplayState");
 
-    if (gameplayState != GameplayEnum.playOnline && oldGameplay == GameplayEnum.playOnline) {
-    channel.sink.add(jsonEncode({"status": "leave"}));
-    cleanLocalData();
+    if (gameplayState != GameplayEnum.playOnline &&
+        oldGameplay == GameplayEnum.playOnline) {
+      channel.sink.add(jsonEncode({"status": "leave"}));
+      cleanLocalData();
       emit(GameLoaded(List.from(localBoard), "", gameplayState));
-    } else if (gameplayState == GameplayEnum.playOnline && oldGameplay != GameplayEnum.playOnline) {
+    } else if (gameplayState == GameplayEnum.playOnline &&
+        oldGameplay != GameplayEnum.playOnline) {
       add(GameConnectToServer());
     } else {
       cleanLocalData();
