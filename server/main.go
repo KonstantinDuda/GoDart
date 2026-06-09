@@ -73,6 +73,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		write: make(chan map[string]any),
 		//inRoom: false,
 	}
+	client.Conn.SetReadLimit(1024)
 
 	clients = append(clients, client)
 	go client.listen()
